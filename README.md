@@ -10,16 +10,17 @@ Die fertige APK gibt es unter [Releases](https://github.com/dacown87/SimpleMigr/
 1. `app-release.apk` auf das Android-Gerät laden.
 2. Öffnen und die Installation aus unbekannten Quellen erlauben, falls Android danach fragt.
 
-Die APK ist mit einem Debug-Schlüssel signiert und nicht im Play Store. Updates lassen sich nur über eine APK mit demselben Schlüssel einspielen.
+Die APK ist mit einem eigenen Release-Schlüssel signiert und nicht im Play Store. Updates lassen sich nur über eine APK mit demselben Schlüssel einspielen.
 
 ## Funktionen
 
-- Monatsraster wie auf Papier
+- Monatsraster wie auf Papier: Hauptzeilen immer sichtbar, Symptome, Aura, Medikamente, Auslöser und Wetter aufklappbar
 - Schnelleintrag für heute, auch während einer Attacke in wenigen Taps
 - Schmerzen (0–3), Migräne, Periode, Übelkeit, Aura mit eigenen Aura-Symptomen
+- Medikamente genommen, danach „Hat geholfen“
 - „Neue Attacke“ (`/`) markiert, dass an dem Tag eine Attacke endet und eine neue beginnt
 - Auslöser aus einer erweiterbaren Liste plus freie Notiz
-- Wetter wird mitgespeichert
+- Wetter wird mitgespeichert; der Ort lässt sich per Name oder Postleitzahl suchen (Standard Deutschland)
 - Tägliche Erinnerung
 - PDF-Export im Look der Papiertabelle
 - Alle Symptome und Auslöser sind in den Einstellungen anpassbar
@@ -37,4 +38,4 @@ flutter run
 flutter build apk --release
 ```
 
-Den Entwurf und die fachlichen Regeln beschreibt [PLAN.md](PLAN.md).
+Den Entwurf und die fachlichen Regeln beschreibt [PLAN.md](PLAN.md), Aufbau und Release-Ablauf stehen in [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
