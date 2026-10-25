@@ -121,18 +121,6 @@ class _DayEditorState extends State<DayEditor> {
           ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(aura.name),
-          value: auraOn,
-          onChanged: (v) => setFlag(aura, v),
-        ),
-        if (auraOn)
-          _ChipWrap(
-            symptoms: auraSymptoms,
-            day: day,
-            onToggle: (s, on) => setFlag(s, on),
-          ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
           title: Text(period.name),
           value: day.value(period.id) != 0,
           onChanged: (v) => setFlag(period, v),
@@ -150,21 +138,28 @@ class _DayEditorState extends State<DayEditor> {
             value: day.value(s.id) != 0,
             onChanged: (v) => setFlag(s, v),
           ),
-        if (triggers.isNotEmpty)
-          Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(bottom: 8),
-              title: const Text('Auslöser'),
-              children: [
-                _ChipWrap(
-                  symptoms: triggers,
-                  day: day,
-                  onToggle: (s, on) => setFlag(s, on),
-                ),
-              ],
+        _Section(
+          title: aura.name,
+          switchValue: auraOn,
+          onSwitch: (v) => setFlag(aura, v),
+          children: [
+            _ChipWrap(
+              symptoms: auraSymptoms,
+              day: day,
+              onToggle: (s, on) => setFlag(s, on),
             ),
+          ],
+        ),
+        if (triggers.isNotEmpty)
+          _Section(
+            title: 'Auslöser',
+            children: [
+              _ChipWrap(
+                symptoms: triggers,
+                day: day,
+                onToggle: (s, on) => setFlag(s, on),
+              ),
+            ],
           ),
         const SizedBox(height: 8),
         _NoteField(
@@ -177,6 +172,57 @@ class _DayEditorState extends State<DayEditor> {
           WeatherCard(day: day),
         ],
       ],
+    );
+  }
+}
+
+/// Ausklappbarer Block am Ende des Editors (Aura, Auslöser; weitere folgen so).
+/// Mit [switchValue] hat der Block einen Schalter im Kopf: an klappt auf, aus zu.
+class _Section extends StatefulWidget {
+  const _Section({
+    required this.title,
+    required this.children,
+    this.switchValue,
+    this.onSwitch,
+  });
+
+  final String title;
+  final List<Widget> children;
+  final bool? switchValue;
+  final ValueChanged<bool>? onSwitch;
+
+  @override
+  State<_Section> createState() => _SectionState();
+}
+
+class _SectionState extends State<_Section> {
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        // Der Schalter ist Teil des Schlüssels: Umschalten baut den Block neu auf,
+        // er startet dann passend auf- oder zugeklappt.
+        key: ValueKey('section-${widget.title}-${widget.switchValue}'),
+        initiallyExpanded: widget.switchValue ?? false,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        title: Text(widget.title),
+        trailing: widget.switchValue == null
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Switch(
+                    key: ValueKey('switch-${widget.title}'),
+                    value: widget.switchValue!,
+                    onChanged: widget.onSwitch,
+                  ),
+                  const Icon(Icons.expand_more),
+                ],
+              ),
+        children: widget.children,
+      ),
     );
   }
 }

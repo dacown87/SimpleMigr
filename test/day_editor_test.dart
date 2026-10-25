@@ -53,13 +53,15 @@ void main() {
     await settle(tester);
     expect(find.text('Sicht'), findsNothing);
 
-    await tester.tap(find.widgetWithText(SwitchListTile, 'Aura'));
+    await tester.tap(find.byKey(const ValueKey('switch-Aura')));
     await settle(tester);
+    await tester.pumpAndSettle();
     expect(find.text('Sicht'), findsOneWidget);
     expect(find.text('Sprache'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(SwitchListTile, 'Aura'));
+    await tester.tap(find.byKey(const ValueKey('switch-Aura')));
     await settle(tester);
+    await tester.pumpAndSettle();
     expect(find.text('Sicht'), findsNothing);
   });
 
@@ -149,5 +151,16 @@ void main() {
     expect(find.byKey(const ValueKey('weather-card'), skipOffstage: false), findsOneWidget);
     expect(find.textContaining('Luftdruck 1011 hPa (−4,5 zum Vortag)', skipOffstage: false), findsOneWidget);
     expect(find.text('Niederschlag 4,1 mm', skipOffstage: false), findsOneWidget);
+  });
+
+  dbWidgetTest('Reihenfolge: Aura und Auslöser stehen als Blöcke unter Periode/Übelkeit', (tester, env) async {
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    double y(Finder f) => tester.getTopLeft(f).dy;
+    final nausea = y(find.widgetWithText(SwitchListTile, 'Übelkeit'));
+    final aura = y(find.text('Aura'));
+    final triggers = y(find.text('Auslöser'));
+    expect(aura, greaterThan(nausea));
+    expect(triggers, greaterThan(aura));
   });
 }
