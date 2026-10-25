@@ -132,6 +132,44 @@ List<Symptom> gridRows(List<Symptom> symptoms) => [
         ...symptoms.where((s) => s.grp == g),
     ];
 
+/// Ausklappbarer Abschnitt des Rasters, analog zu den Blöcken im Tages-Editor.
+class _GridSection {
+  const _GridSection(this.title, this.symptoms);
+
+  final String title;
+  final List<Symptom> symptoms;
+}
+
+/// Hauptzeilen (immer sichtbar) und Abschnitte (aufklappbar) des Rasters.
+(List<Symptom>, List<_GridSection>) _gridLayout(List<Symptom> all) {
+  const mainKeys = [SymptomKey.migraine, SymptomKey.pain, SymptomKey.period];
+  const auraKeys = [SymptomKey.aura];
+  const medKeys = [SymptomKey.medication, SymptomKey.medHelped];
+  final rows = gridRows(all);
+  final main = [
+    for (final k in mainKeys) ...rows.where((s) => s.key == k),
+  ];
+  final sections = [
+    _GridSection('Symptome', [
+      for (final s in rows)
+        if (s.grp == SymptomGroup.general && (s.key == null || s.key == SymptomKey.nausea)) s,
+    ]),
+    _GridSection('Aura', [
+      for (final s in rows)
+        if (auraKeys.contains(s.key) || s.grp == SymptomGroup.aura) s,
+    ]),
+    _GridSection('Medikamente', [
+      for (final s in rows)
+        if (medKeys.contains(s.key)) s,
+    ]),
+    _GridSection('Auslöser', [
+      for (final s in rows)
+        if (s.grp == SymptomGroup.trigger) s,
+    ]),
+  ];
+  return (main, [for (final g in sections) if (g.symptoms.isNotEmpty) g]);
+}
+
 class MonthGrid extends StatefulWidget {
   const MonthGrid({super.key, required this.data, required this.today, required this.onDayTap});
 
@@ -152,6 +190,11 @@ class _MonthGridState extends State<MonthGrid> {
         : 0,
   );
 
+  final _open = <String>{};
+
+  void _toggle(String title) =>
+      setState(() => _open.contains(title) ? _open.remove(title) : _open.add(title));
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -162,8 +205,65 @@ class _MonthGridState extends State<MonthGrid> {
   Widget build(BuildContext context) {
     final data = widget.data, today = widget.today, onDayTap = widget.onDayTap;
     final days = monthDays(data.year, data.month);
-    final rows = gridRows(data.symptoms);
+    final (main, sections) = _gridLayout(data.symptoms);
     final line = BorderSide(color: AppColors.surfaceHigh.withValues(alpha: 0.8));
+
+    Widget nameCell(String text, {bool dim = false}) => Container(
+          height: _cell,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12, right: 4),
+          decoration: BoxDecoration(border: Border(top: line)),
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 15, color: dim ? AppColors.textDim : AppColors.text)),
+        );
+
+    // Kopfzeile eines Abschnitts: Name mit Pfeil; zugeklappt zeigt ein Punkt je Tag,
+    // dass darin etwas eingetragen ist.
+    Widget header(String title, bool open, {required Key key, required VoidCallback onTap}) =>
+        InkWell(
+          key: key,
+          onTap: onTap,
+          child: Container(
+            height: _cell,
+            padding: const EdgeInsets.only(left: 12, right: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border(top: line),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+                Icon(open ? Icons.expand_less : Icons.expand_more, size: 20),
+              ],
+            ),
+          ),
+        );
+
+    Widget headerDayCell(_GridSection? g, bool open, DateTime d) {
+      final marked = !open && g != null && g.symptoms.any((s) => data.day(d).value(s.id) != 0);
+      return Container(
+        width: _cell,
+        height: _cell,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: line),
+        ),
+        child: marked
+            ? const Icon(Icons.circle, size: 10, color: AppColors.accent)
+            : null,
+      );
+    }
+
+    const weatherTitle = 'Wetter';
+    final weatherOpen = _open.contains(weatherTitle);
 
     return SingleChildScrollView(
       child: Row(
@@ -175,30 +275,21 @@ class _MonthGridState extends State<MonthGrid> {
             child: Column(
               children: [
                 const SizedBox(height: _cell),
-                for (final s in rows)
-                  Container(
-                    height: _cell,
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.only(left: 12, right: 4),
-                    decoration: BoxDecoration(border: Border(top: line)),
-                    child: Text(s.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: s.archived ? AppColors.textDim : AppColors.text,
-                        )),
-                  ),
-                if (data.hasWeather)
-                  for (final label in const ['Luftdruck', 'Druck ±'])
-                    Container(
-                      height: _cell,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.only(left: 12, right: 4),
-                      decoration: BoxDecoration(border: Border(top: line)),
-                      child: Text(label,
-                          style: const TextStyle(fontSize: 15, color: AppColors.textDim)),
-                    ),
+                for (final s in main) nameCell(s.name, dim: s.archived),
+                for (final g in sections) ...[
+                  header(g.title, _open.contains(g.title),
+                      key: ValueKey('section-${g.title}'), onTap: () => _toggle(g.title)),
+                  if (_open.contains(g.title))
+                    for (final s in g.symptoms) nameCell(s.name, dim: s.archived),
+                ],
+                if (data.hasWeather) ...[
+                  header(weatherTitle, weatherOpen,
+                      key: const ValueKey('section-$weatherTitle'),
+                      onTap: () => _toggle(weatherTitle)),
+                  if (weatherOpen)
+                    for (final label in const ['Luftdruck', 'Druck ±'])
+                      nameCell(label, dim: true),
+                ],
               ],
             ),
           ),
@@ -230,18 +321,25 @@ class _MonthGridState extends State<MonthGrid> {
                                   fontWeight: d == today ? FontWeight.bold : null,
                                 )),
                           ),
-                          for (final s in rows)
-                            _GridCell(symptom: s, day: data.day(d)),
+                          for (final s in main) _GridCell(symptom: s, day: data.day(d)),
+                          for (final g in sections) ...[
+                            headerDayCell(g, _open.contains(g.title), d),
+                            if (_open.contains(g.title))
+                              for (final s in g.symptoms) _GridCell(symptom: s, day: data.day(d)),
+                          ],
                           if (data.hasWeather) ...[
-                            _WeatherCell(
-                              text: data.day(d).weather?.pressureMean?.round().toString() ?? '',
-                            ),
-                            _WeatherCell(
-                              text: data.day(d).pressureDelta == null
-                                  ? ''
-                                  : signed1(data.day(d).pressureDelta!),
-                              strong: (data.day(d).pressureDelta ?? 0).abs() >= 5,
-                            ),
+                            headerDayCell(null, weatherOpen, d),
+                            if (weatherOpen) ...[
+                              _WeatherCell(
+                                text: data.day(d).weather?.pressureMean?.round().toString() ?? '',
+                              ),
+                              _WeatherCell(
+                                text: data.day(d).pressureDelta == null
+                                    ? ''
+                                    : signed1(data.day(d).pressureDelta!),
+                                strong: (data.day(d).pressureDelta ?? 0).abs() >= 5,
+                              ),
+                            ],
                           ],
                         ],
                       ),

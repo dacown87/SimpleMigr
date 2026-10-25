@@ -36,7 +36,15 @@ void main() {
 
     expect(find.text('3'), findsWidgets); // Schmerz 3 (und Tageszahl 3)
     expect(find.text('/'), findsOneWidget);
+    // Erweiterte Zeilen sind zugeklappt, nur ein Punkt zeigt den Eintrag.
+    expect(find.text('Übelkeit'), findsNothing);
+    expect(find.text('X'), findsNothing);
+    expect(find.byIcon(Icons.circle), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('section-Symptome')));
+    await settle(tester);
+    expect(find.text('Übelkeit'), findsOneWidget);
     expect(find.text('X'), findsOneWidget); // Übelkeit am 2.
+    expect(find.byIcon(Icons.circle), findsNothing);
 
     Iterable<Color?> fills() => tester
         .widgetList<Container>(find.byType(Container))
