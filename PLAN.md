@@ -120,14 +120,14 @@ Monatszählung: Attacken, deren erster Tag im Monat liegt
 - [x] `attacks.dart`: Attacken zählen als reine Funktion
 - [x] Unit-Tests (siehe Testplan unten, In-Memory-Datenbank `NativeDatabase.memory()`)
 
-### Phase 2 – Kern-UI (offen: Papierdaten-Abgleich)
+### Phase 2 – Kern-UI ✅
 - [x] Dunkles Theme, Navigation „Heute“ / „Monat“ / „Einstellungen“
 - [x] „Heute“-Bildschirm mit sofortigem Speichern
 - [x] Monatsraster mit Monatsnavigation
 - [x] Tag aus dem Raster bearbeiten
 - [x] Einstellungen: eine Liste mit drei Abschnitten (Symptome, Aura, Auslöser): hinzufügen, umbenennen, archivieren
-- [ ] Papierdaten August/September 2026 als Testdaten, Abgleich mit dem Foto
-  (Fixture `test/paper_fixture_test.dart` ist synthetisch nach dem Plan-Beispiel; echte Papierdaten + Summen vom Foto fehlen noch)
+- [x] Papierdaten August/September 2026 als Testdaten, Abgleich mit dem Foto
+  (Foto: `docs/papier-aug-sep-2026.png`, Fixture: `test/paper_fixture_test.dart`; Aug 9 Tage/3 Attacken, Sep 11 Tage/5 Attacken; Papier hat Einträge in der nicht existierenden Spalte „31“ des Septembers)
 
 ### Phase 3 – Erinnerung ✅
 - [x] `flutter_local_notifications` + `timezone`, täglich, **inexakt** (`inexactAllowWhileIdle`, keine Exact-Alarm-Berechtigung nötig)
