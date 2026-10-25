@@ -9,6 +9,7 @@ Kurzer Überblick für alle, die am Code arbeiten. Fachliche Regeln und Entwurf 
 | `lib/data/` | Drift-Datenbank (`database.dart`), Zugriff und Monatsdaten (`repository.dart`), Attackenzählung (`attacks.dart`) |
 | `lib/ui/` | Tages-Editor (`day_editor.dart`), Monatsraster (`month_screen.dart`), Einstellungen, Theme |
 | `lib/weather/` | Wetterabruf (Open-Meteo, Orte auch per PLZ über zippopotam.us) |
+| `lib/update/` | Update-Prüfung beim Start (`updater.dart`) |
 | `lib/pdf/` | PDF-Export im Look der Papiertabelle |
 | `test/` | Unit- und Widget-Tests, dazu ein Test mit den echten Daten Aug/Sep 2026 |
 
@@ -71,3 +72,13 @@ base64 -w0 release.jks | gh secret set KEYSTORE_BASE64
 ```
 
 Updates lassen sich nur mit einer APK einspielen, die denselben Schlüssel nutzt. Den Keystore deshalb sichern.
+
+## Update aus GitHub
+
+`GithubUpdater` fragt beim Start `releases/latest` ab und vergleicht den Tag (`v1.0.5`) mit der installierten Version. Ist er höher und hängt eine `.apk` am Release, zeigt `HomeShell` ein Banner. „Installieren“ lädt die APK in den temporären Ordner und öffnet sie über `open_filex` im Android-Installer. Dafür steht `REQUEST_INSTALL_PACKAGES` im Manifest.
+
+- Die Version kommt aus `pubspec.yaml`, der Tag muss also dazu passen und höher sein als die installierte Version.
+- Das Release muss eine APK als Datei enthalten (macht der Workflow).
+- Die neue APK muss mit demselben Schlüssel signiert sein, sonst lehnt Android das Update ab.
+- Fehler (offline, Rate-Limit) bleiben still, es erscheint dann kein Banner.
+- In Tests ist der Updater austauschbar (`SimpleMigrApp(updater: …)`), ohne Updater passiert nichts.

@@ -7,6 +7,7 @@ import 'reminder.dart';
 import 'ui/export_tile.dart';
 import 'ui/reminder_tile.dart';
 import 'ui/weather_tile.dart';
+import 'update/updater.dart';
 import 'weather/weather_api.dart';
 import 'weather/weather_sync.dart';
 
@@ -27,6 +28,7 @@ Future<void> main() async {
     repo: repo,
     navigatorKey: navKey,
     shellKey: shellKey,
+    updater: GithubUpdater(),
     settingsTiles: [
       ReminderTile(reminder: reminder),
       WeatherPlaceTile(location: location, api: weatherApi),

@@ -12,6 +12,8 @@ Die fertige APK gibt es unter [Releases](https://github.com/dacown87/SimpleMigr/
 
 Die APK ist mit einem eigenen Release-Schlüssel signiert und nicht im Play Store. Updates lassen sich nur über eine APK mit demselben Schlüssel einspielen.
 
+Beim Start prüft die App auf GitHub, ob es eine neuere Version gibt, und zeigt dann einen Hinweis. „Installieren“ lädt die APK und öffnet den Android-Installer; beim ersten Mal muss Android die Installation aus dieser App erlauben. Ohne Internet passiert nichts.
+
 ## Funktionen
 
 - Monatsraster wie auf Papier: Hauptzeilen immer sichtbar, Symptome, Aura, Medikamente, Auslöser und Wetter aufklappbar
