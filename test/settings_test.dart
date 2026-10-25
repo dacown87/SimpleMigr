@@ -8,7 +8,7 @@ import 'package:simplemigr/ui/today_screen.dart';
 import 'helpers.dart';
 
 void main() {
-  dbWidgetTest('Auslöser anlegen → erscheint in „Mehr“', (tester, env) async {
+  dbWidgetTest('Auslöser anlegen → erscheint unter „Auslöser“', (tester, env) async {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('add-trigger')));
@@ -25,7 +25,7 @@ void main() {
         theme: buildTheme(),
         home: TodayScreen(repo: env.repo, clock: () => DateTime(2026, 9, 4))));
     await settle(tester);
-    await tester.tap(find.text('Mehr'));
+    await tester.tap(find.text('Auslöser'));
     await tester.pumpAndSettle();
     expect(find.text('Koffein'), findsOneWidget);
   });
@@ -36,13 +36,19 @@ void main() {
     final period = await tester.runAsync(() => env.idOf(SymptomKey.period));
     final tile = find.byKey(ValueKey('symptom-$period'));
     expect(tile, findsOneWidget);
-    expect(find.descendant(of: tile, matching: find.byType(IconButton)), findsNothing);
+    // Systemsymptome: Haken immer an und nicht änderbar
+    final sys = tester.widget<Checkbox>(find.byKey(ValueKey('check-$period')));
+    expect(sys.value, isTrue);
+    expect(sys.onChanged, isNull);
 
-    // Eigene Symptome (Auslöser) haben den Button
+    // Eigene Symptome (Auslöser) lassen sich abwählen
     await tester.ensureVisible(find.text('Stress'));
     await tester.pump();
     final stress = find.widgetWithText(ListTile, 'Stress');
-    expect(find.descendant(of: stress, matching: find.byTooltip('Archivieren')), findsOneWidget);
+    expect(
+      tester.widget<Checkbox>(find.descendant(of: stress, matching: find.byType(Checkbox))).onChanged,
+      isNotNull,
+    );
   });
 
   dbWidgetTest('Archivieren blendet Auslöser in „Heute“ aus', (tester, env) async {
@@ -51,9 +57,70 @@ void main() {
     await tester.ensureVisible(find.text('Stress'));
     await tester.pump();
     await tester.tap(find.descendant(
-        of: find.widgetWithText(ListTile, 'Stress'), matching: find.byTooltip('Archivieren')));
+        of: find.widgetWithText(ListTile, 'Stress'), matching: find.byType(Checkbox)));
     await settle(tester);
     final list = (await tester.runAsync(() => env.repo.watchSymptoms().first))!;
     expect(list.map((s) => s.name), isNot(contains('Stress')));
+  });
+
+  dbWidgetTest('Löschen im Dialog: Symptom und Einträge sind weg', (tester, env) async {
+    final id = (await tester.runAsync(() => env.repo.addSymptom('Koffein', SymptomGroup.trigger)))!;
+    await tester.runAsync(() => env.repo.setValue(DateTime(2026, 9, 4), id, 1));
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
+    await settle(tester);
+    await tester.ensureVisible(find.text('Koffein'));
+    await tester.pump();
+    await tester.tap(find.text('Koffein'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('delete-in-dialog')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirm-delete')));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Koffein'), findsNothing);
+    final rows = (await tester.runAsync(() => env.db.select(env.db.dayValues).get()))!;
+    expect(rows.where((r) => r.symptomId == id), isEmpty);
+  });
+
+  dbWidgetTest('Wischen löscht ein eigenes Symptom, Systemsymptome nicht', (tester, env) async {
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
+    await settle(tester);
+    final period = await tester.runAsync(() => env.idOf(SymptomKey.period));
+    expect(find.byKey(ValueKey('dismiss-$period')), findsNothing);
+    await tester.ensureVisible(find.text('Stress'));
+    await tester.pump();
+    await tester.drag(find.text('Stress'), const Offset(-600, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirm-delete')));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Stress'), findsNothing);
+  });
+
+  dbWidgetTest('Löschen: Knopf im Dialog entfernt Symptom samt Einträgen', (tester, env) async {
+    final id = (await tester.runAsync(() => env.repo.addSymptom('Käse', SymptomGroup.trigger)))!;
+    await tester.runAsync(() => env.repo.setValue(DateTime(2026, 9, 4), id, 1));
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
+    await settle(tester);
+    await tester.ensureVisible(find.text('Käse'));
+    await tester.pump();
+    await tester.tap(find.text('Käse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('delete-in-dialog')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('confirm-delete')));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Käse'), findsNothing);
+    final rows = (await tester.runAsync(() => env.db.select(env.db.dayValues).get()))!;
+    expect(rows.where((r) => r.symptomId == id), isEmpty);
+  });
+
+  dbWidgetTest('Löschen: Systemsymptom hat keinen Löschen-Knopf', (tester, env) async {
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
+    await settle(tester);
+    await tester.tap(find.text('Periode'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('delete-in-dialog')), findsNothing);
   });
 }

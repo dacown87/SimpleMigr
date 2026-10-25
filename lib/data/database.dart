@@ -44,19 +44,39 @@ class DayMeta extends Table {
   Set<Column> get primaryKey => {date};
 }
 
-@DriftDatabase(tables: [Symptoms, DayValues, DayMeta])
+/// Tageswetter vom Wetterdienst (nur um Migränetage herum abgerufen).
+@DataClassName('WeatherDay')
+class DayWeather extends Table {
+  TextColumn get date => text()();
+  RealColumn get pressureMean => real().nullable()(); // hPa auf Meereshöhe
+  RealColumn get pressureMin => real().nullable()();
+  RealColumn get pressureMax => real().nullable()();
+  RealColumn get tempMin => real().nullable()(); // °C
+  RealColumn get tempMax => real().nullable()();
+  RealColumn get humidity => real().nullable()(); // % Mittel
+  RealColumn get precipitation => real().nullable()(); // mm Summe
+  RealColumn get windMax => real().nullable()(); // km/h
+
+  @override
+  Set<Column> get primaryKey => {date};
+}
+
+@DriftDatabase(tables: [Symptoms, DayValues, DayMeta, DayWeather])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'simplemigr'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
           await _seed();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.createTable(dayWeather);
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');

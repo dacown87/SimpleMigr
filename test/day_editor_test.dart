@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simplemigr/app.dart';
@@ -107,5 +108,46 @@ void main() {
     await settle(tester);
     expect(find.text('Einstellungen'), findsWidgets);
     expect(find.text('Symptome'), findsOneWidget);
+  });
+
+  dbWidgetTest('Periode und Übelkeit sind eigene Schalter, Auslöser klappen aus', (tester, env) async {
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    expect(find.widgetWithText(SwitchListTile, 'Periode'), findsOneWidget);
+    expect(find.widgetWithText(SwitchListTile, 'Übelkeit'), findsOneWidget);
+    expect(find.text('Mehr'), findsNothing);
+    expect(find.text('Stress'), findsNothing); // eingeklappt
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Periode'));
+    await settle(tester);
+    final id = (await tester.runAsync(() => env.idOf(SymptomKey.period)))!;
+    expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(id), 1);
+
+    await tester.tap(find.text('Auslöser'));
+    await tester.pumpAndSettle();
+    expect(find.text('Stress'), findsOneWidget);
+  });
+
+  dbWidgetTest('Wetterkarte erscheint nur mit Wetterdaten, inkl. Druckänderung', (tester, env) async {
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    expect(find.byKey(const ValueKey('weather-card'), skipOffstage: false), findsNothing);
+
+    await tester.runAsync(() => env.repo.saveWeather([
+          DayWeatherCompanion.insert(
+              date: '2026-09-03', pressureMean: const Value(1015.0)),
+          DayWeatherCompanion.insert(
+              date: '2026-09-04',
+              pressureMean: const Value(1010.5),
+              tempMin: const Value(8.0),
+              tempMax: const Value(14.0),
+              humidity: const Value(73.0),
+              precipitation: const Value(4.1),
+              windMax: const Value(16.0)),
+        ]));
+    await settle(tester);
+    expect(find.byKey(const ValueKey('weather-card'), skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('Luftdruck 1011 hPa (−4,5 zum Vortag)', skipOffstage: false), findsOneWidget);
+    expect(find.text('Niederschlag 4,1 mm', skipOffstage: false), findsOneWidget);
   });
 }

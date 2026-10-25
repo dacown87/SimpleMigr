@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../data/repository.dart';
 import 'theme.dart';
+import 'weather_card.dart';
 import 'util.dart';
 
 /// Eingabe für einen Tag. Gleiche Komponente für „Heute“ und das Monatsraster.
@@ -130,55 +131,51 @@ class _DayEditorState extends State<DayEditor> {
             day: day,
             onToggle: (s, on) => setFlag(s, on),
           ),
-        Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            childrenPadding: EdgeInsets.zero,
-            title: const Text('Mehr'),
-            children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(period.name),
-                value: day.value(period.id) != 0,
-                onChanged: (v) => setFlag(period, v),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(nausea.name),
-                value: day.value(nausea.id) != 0,
-                onChanged: (v) => setFlag(nausea, v),
-              ),
-              for (final s in custom)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(s.name),
-                  value: day.value(s.id) != 0,
-                  onChanged: (v) => setFlag(s, v),
-                ),
-              if (triggers.isNotEmpty) ...[
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Auslöser'),
-                  ),
-                ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(period.name),
+          value: day.value(period.id) != 0,
+          onChanged: (v) => setFlag(period, v),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(nausea.name),
+          value: day.value(nausea.id) != 0,
+          onChanged: (v) => setFlag(nausea, v),
+        ),
+        for (final s in custom)
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(s.name),
+            value: day.value(s.id) != 0,
+            onChanged: (v) => setFlag(s, v),
+          ),
+        if (triggers.isNotEmpty)
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 8),
+              title: const Text('Auslöser'),
+              children: [
                 _ChipWrap(
                   symptoms: triggers,
                   day: day,
                   onToggle: (s, on) => setFlag(s, on),
                 ),
               ],
-              const SizedBox(height: 12),
-              _NoteField(
-                key: ValueKey(date),
-                text: day.note,
-                onChanged: (t) => guarded(context, () => repo.setNote(date, t)),
-              ),
-            ],
+            ),
           ),
+        const SizedBox(height: 8),
+        _NoteField(
+          key: ValueKey(date),
+          text: day.note,
+          onChanged: (t) => guarded(context, () => repo.setNote(date, t)),
         ),
+        if (day.weather != null) ...[
+          const SizedBox(height: 16),
+          WeatherCard(day: day),
+        ],
       ],
     );
   }
@@ -247,7 +244,7 @@ class _PainBox extends StatelessWidget {
               style: TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
-                color: selected ? const Color(0xFF0B1320) : AppColors.textDim,
+                color: selected ? AppColors.onAccent : AppColors.textDim,
               ),
             ),
           ),

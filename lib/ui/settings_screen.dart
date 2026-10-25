@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/database.dart';
 import '../data/repository.dart';
+import 'theme.dart';
 import 'util.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -61,35 +62,86 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ),
-        for (final s in items)
-          ListTile(
-            key: ValueKey('symptom-${s.id}'),
-            title: Text(s.name,
-                style: s.archived
-                    ? const TextStyle(decoration: TextDecoration.lineThrough)
-                    : null),
-            onTap: () async {
-              final name = await _askName(context, 'Umbenennen', initial: s.name);
-              if (name != null && context.mounted) {
-                await guarded(context, () => repo.renameSymptom(s.id, name));
-              }
-            },
-            trailing: s.key != null
-                ? null // Systemsymptome: nur umbenennen
-                : IconButton(
-                    tooltip: s.archived ? 'Wiederherstellen' : 'Archivieren',
-                    icon: Icon(s.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
-                    onPressed: () =>
-                        guarded(context, () => repo.setArchived(s.id, !s.archived)),
-                  ),
-          ),
+        for (final s in items) _tile(context, s),
       ],
     );
   }
 
-  Future<String?> _askName(BuildContext context, String title, {String initial = ''}) {
+  Widget _tile(BuildContext context, Symptom s) {
+    final tile = ListTile(
+      key: ValueKey('symptom-${s.id}'),
+      title: Text(s.name,
+          style: s.archived ? const TextStyle(color: AppColors.textDim) : null),
+      onTap: () async {
+        final r = await _edit(context, s);
+        if (r == null || !context.mounted) return;
+        if (r.delete) {
+          await _delete(context, s);
+        } else {
+          await guarded(context, () => repo.renameSymptom(s.id, r.name));
+        }
+      },
+      // Haken = wird angezeigt; Systemsymptome sind immer an.
+      trailing: Checkbox(
+        key: ValueKey('check-${s.id}'),
+        value: !s.archived,
+        onChanged: s.key != null
+            ? null
+            : (v) => guarded(context, () => repo.setArchived(s.id, !(v ?? true))),
+      ),
+    );
+    if (s.key != null) return tile;
+    return Dismissible(
+      key: ValueKey('dismiss-${s.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: AppColors.period,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      confirmDismiss: (_) async {
+        await _delete(context, s);
+        return false; // Die Liste aktualisiert sich über den Stream.
+      },
+      child: tile,
+    );
+  }
+
+  Future<void> _delete(BuildContext context, Symptom s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('„${s.name}“ löschen?'),
+        content: const Text('Das Symptom und alle bisherigen Einträge dazu werden '
+            'endgültig gelöscht. Zum bloßen Ausblenden den Haken entfernen.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
+          TextButton(
+            key: const ValueKey('confirm-delete'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true && context.mounted) {
+      await guarded(context, () => repo.deleteSymptom(s.id));
+    }
+  }
+
+  Future<String?> _askName(BuildContext context, String title) async {
+    final r = await _dialog(context, title, '', canDelete: false);
+    return r?.name;
+  }
+
+  Future<_NameResult?> _edit(BuildContext context, Symptom s) =>
+      _dialog(context, 'Umbenennen', s.name, canDelete: s.key == null);
+
+  Future<_NameResult?> _dialog(BuildContext context, String title, String initial,
+      {required bool canDelete}) {
     final controller = TextEditingController(text: initial);
-    return showDialog<String>(
+    return showDialog<_NameResult>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
@@ -97,16 +149,29 @@ class SettingsScreen extends StatelessWidget {
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          onSubmitted: (v) => Navigator.of(ctx).pop(v),
+          onSubmitted: (v) => Navigator.of(ctx).pop(_NameResult(v)),
         ),
         actions: [
+          if (canDelete)
+            TextButton(
+              key: const ValueKey('delete-in-dialog'),
+              onPressed: () => Navigator.of(ctx).pop(const _NameResult('', delete: true)),
+              child: const Text('Löschen'),
+            ),
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Abbrechen')),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            onPressed: () => Navigator.of(ctx).pop(_NameResult(controller.text)),
             child: const Text('OK'),
           ),
         ],
       ),
-    ).then((v) => (v == null || v.trim().isEmpty) ? null : v);
+    ).then((r) => (r == null || (!r.delete && r.name.trim().isEmpty)) ? null : r);
   }
+}
+
+class _NameResult {
+  const _NameResult(this.name, {this.delete = false});
+
+  final String name;
+  final bool delete;
 }

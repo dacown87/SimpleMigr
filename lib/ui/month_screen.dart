@@ -6,6 +6,7 @@ import '../data/repository.dart';
 import 'day_editor.dart';
 import 'theme.dart';
 import 'util.dart';
+import 'weather_card.dart' show signed1;
 
 const double _cell = 44;
 const double _nameWidth = 120;
@@ -188,6 +189,16 @@ class _MonthGridState extends State<MonthGrid> {
                           color: s.archived ? AppColors.textDim : AppColors.text,
                         )),
                   ),
+                if (data.hasWeather)
+                  for (final label in const ['Luftdruck', 'Druck ±'])
+                    Container(
+                      height: _cell,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 12, right: 4),
+                      decoration: BoxDecoration(border: Border(top: line)),
+                      child: Text(label,
+                          style: const TextStyle(fontSize: 15, color: AppColors.textDim)),
+                    ),
               ],
             ),
           ),
@@ -221,6 +232,17 @@ class _MonthGridState extends State<MonthGrid> {
                           ),
                           for (final s in rows)
                             _GridCell(symptom: s, day: data.day(d)),
+                          if (data.hasWeather) ...[
+                            _WeatherCell(
+                              text: data.day(d).weather?.pressureMean?.round().toString() ?? '',
+                            ),
+                            _WeatherCell(
+                              text: data.day(d).pressureDelta == null
+                                  ? ''
+                                  : signed1(data.day(d).pressureDelta!),
+                              strong: (data.day(d).pressureDelta ?? 0).abs() >= 5,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -271,6 +293,32 @@ class _GridCell extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: v != 0 && color != null ? AppColors.onMigraine : AppColors.text,
           )),
+    );
+  }
+}
+
+class _WeatherCell extends StatelessWidget {
+  const _WeatherCell({required this.text, this.strong = false});
+
+  final String text;
+
+  /// Große Druckänderung (≥ 5 hPa) wird rosa hinterlegt.
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: _cell,
+      height: _cell,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: strong ? AppColors.accent.withValues(alpha: 0.35) : null,
+        border: Border(
+          top: BorderSide(color: AppColors.surfaceHigh.withValues(alpha: 0.8)),
+          left: BorderSide(color: AppColors.surfaceHigh.withValues(alpha: 0.4)),
+        ),
+      ),
+      child: Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textDim)),
     );
   }
 }

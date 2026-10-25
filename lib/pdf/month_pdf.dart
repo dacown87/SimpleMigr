@@ -80,6 +80,21 @@ pw.Widget _monthPage(MonthData m) {
             cell(text(s, m.day(d)), fill: fill(s, m.day(d)), bold: true),
           cell('${days.where((d) => m.day(d).value(s.id) != 0).length}'),
         ]),
+      if (m.hasWeather) ...[
+        pw.TableRow(children: [
+          cell('Luftdruck', align: pw.Alignment.centerLeft),
+          for (final d in days) cell(m.day(d).weather?.pressureMean?.round().toString() ?? ''),
+          cell(''),
+        ]),
+        pw.TableRow(children: [
+          cell('Druck +/-', align: pw.Alignment.centerLeft),
+          for (final d in days)
+            cell(m.day(d).pressureDelta == null
+                ? ''
+                : m.day(d).pressureDelta!.toStringAsFixed(1)),
+          cell(''),
+        ]),
+      ],
     ],
   );
 

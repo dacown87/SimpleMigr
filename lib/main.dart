@@ -6,6 +6,9 @@ import 'data/repository.dart';
 import 'reminder.dart';
 import 'ui/export_tile.dart';
 import 'ui/reminder_tile.dart';
+import 'ui/weather_tile.dart';
+import 'weather/weather_api.dart';
+import 'weather/weather_sync.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,12 +20,16 @@ Future<void> main() async {
     navKey.currentState?.popUntil((r) => r.isFirst);
     shellKey.currentState?.showToday();
   });
+  final weatherApi = OpenMeteoApi();
+  final location = await LocationStore.load();
+  WeatherSync(repo: repo, api: weatherApi, location: location).start();
   runApp(SimpleMigrApp(
     repo: repo,
     navigatorKey: navKey,
     shellKey: shellKey,
     settingsTiles: [
       ReminderTile(reminder: reminder),
+      WeatherPlaceTile(location: location, api: weatherApi),
       ExportTile(repo: repo),
     ],
   ));

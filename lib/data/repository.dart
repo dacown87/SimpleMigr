@@ -6,13 +6,30 @@ import 'dates.dart';
 
 /// Alle Werte eines Tages. Fehlende Einträge bedeuten 0/false.
 class DayData {
-  const DayData({this.values = const {}, this.newAttack = false, this.note = ''});
+  const DayData({
+    this.values = const {},
+    this.newAttack = false,
+    this.note = '',
+    this.weather,
+    this.prevPressure,
+  });
 
   final Map<int, int> values; // symptomId -> Wert (nur ≠ 0)
   final bool newAttack;
   final String note;
+  final WeatherDay? weather;
+
+  /// Mittlerer Luftdruck des Vortags (für die Änderung).
+  final double? prevPressure;
 
   int value(int symptomId) => values[symptomId] ?? 0;
+
+  /// Änderung des mittleren Luftdrucks zum Vortag in hPa.
+  double? get pressureDelta {
+    final now = weather?.pressureMean;
+    final before = prevPressure;
+    return now == null || before == null ? null : now - before;
+  }
 }
 
 class MonthData {
@@ -23,6 +40,7 @@ class MonthData {
     required this.days,
     required this.migraineDays,
     required this.attacks,
+    this.weather = const {},
   });
 
   final int year;
@@ -34,7 +52,25 @@ class MonthData {
   final int migraineDays;
   final int attacks;
 
-  DayData day(DateTime d) => days[toKey(d)] ?? const DayData();
+  /// Wetter je Tag (inklusive Vortag des Monatsersten, für die Änderung).
+  final Map<String, WeatherDay> weather;
+
+  bool get hasWeather => weather.keys.any((k) => k.startsWith(
+      '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}'));
+
+  /// Tag mit Wetter und Luftdruckänderung (nur wenn Wetter vorliegt).
+  DayData day(DateTime d) {
+    final base = days[toKey(d)] ?? const DayData();
+    final w = weather[toKey(d)];
+    if (w == null) return base;
+    return DayData(
+      values: base.values,
+      newAttack: base.newAttack,
+      note: base.note,
+      weather: w,
+      prevPressure: weather[toKey(previousDay(d))]?.pressureMean,
+    );
+  }
 }
 
 class Repository {
@@ -47,10 +83,12 @@ class Repository {
 
   Future<int> _idOf(String key) async => (await _byKey(key)).id;
 
-  /// Reaktion auf jede Änderung an einer der drei Tabellen.
+  /// Reaktion auf jede Änderung an einer der Tabellen.
+  Stream<void> get changes => _changes();
+
   Stream<void> _changes() => db
       .customSelect('SELECT 1',
-          readsFrom: {db.symptoms, db.dayValues, db.dayMeta})
+          readsFrom: {db.symptoms, db.dayValues, db.dayMeta, db.dayWeather})
       .watch()
       .map((_) {});
 
@@ -101,10 +139,16 @@ class Repository {
   Future<DayData> _loadDay(String key) async {
     final rows = await (db.select(db.dayValues)..where((v) => v.date.equals(key))).get();
     final meta = await (db.select(db.dayMeta)..where((m) => m.date.equals(key))).getSingleOrNull();
+    final w = await (db.select(db.dayWeather)..where((t) => t.date.equals(key))).getSingleOrNull();
+    final prev = await (db.select(db.dayWeather)
+          ..where((t) => t.date.equals(toKey(previousDay(fromKey(key))))))
+        .getSingleOrNull();
     return DayData(
       values: {for (final r in rows) r.symptomId: r.value},
       newAttack: meta?.newAttack ?? false,
       note: meta?.note ?? '',
+      weather: w,
+      prevPressure: prev?.pressureMean,
     );
   }
 
@@ -202,7 +246,12 @@ class Repository {
         if (!s.archived || usedIds.contains(s.id)) s,
     ];
 
+    final weatherRows = await (db.select(db.dayWeather)
+          ..where((w) => w.date.isBiggerOrEqualValue(from) & w.date.isSmallerOrEqualValue(to)))
+        .get();
+
     return MonthData(
+      weather: {for (final w in weatherRows) w.date: w},
       year: year,
       month: month,
       symptoms: rows,
@@ -210,5 +259,60 @@ class Repository {
       migraineDays: migraineDays.where((d) => d.month == month && d.year == year).length,
       attacks: attacksInMonth(year, month, migraineDays, slashDays),
     );
+  }
+
+  // ── Wetter ──────────────────────────────────────────────────
+
+  /// Tage vor dem ersten und nach dem letzten Migränetag jeder Attacke, für die
+  /// Wetter geholt wird (der erste Tag dient nur der Druckänderung).
+  static const weatherDaysBefore = 3;
+  static const weatherDaysAfter = 2;
+
+  /// Tage rund um Migränetage ohne gespeichertes Wetter. Nur abgeschlossene
+  /// Tage (vor [today]), aufsteigend.
+  Future<List<DateTime>> missingWeatherDays(DateTime today) async {
+    final migraineId = await _idOf(SymptomKey.migraine);
+    final rows = await (db.select(db.dayValues)
+          ..where((v) => v.symptomId.equals(migraineId) & v.value.equals(0).not())
+          ..orderBy([(v) => OrderingTerm.asc(v.date)]))
+        .get();
+    final have = {for (final w in await db.select(db.dayWeather).get()) w.date};
+    final cutoff = dateOnly(today);
+
+    // Zusammenhängende Migränetage bilden einen Lauf.
+    final runs = <(DateTime, DateTime)>[];
+    for (final r in rows) {
+      final d = fromKey(r.date);
+      if (runs.isNotEmpty && toKey(runs.last.$2.add(const Duration(days: 1))) == r.date) {
+        runs[runs.length - 1] = (runs.last.$1, d);
+      } else {
+        runs.add((d, d));
+      }
+    }
+
+    final needed = <String>{};
+    for (final (start, end) in runs) {
+      final last = DateTime(end.year, end.month, end.day + weatherDaysAfter);
+      for (var d = DateTime(start.year, start.month, start.day - weatherDaysBefore);
+          !d.isAfter(last);
+          d = DateTime(d.year, d.month, d.day + 1)) {
+        if (d.isBefore(cutoff) && !have.contains(toKey(d))) needed.add(toKey(d));
+      }
+    }
+    return (needed.toList()..sort()).map(fromKey).toList();
+  }
+
+  /// Löscht ein eigenes Symptom samt aller Einträge. Systemsymptome bleiben.
+  Future<void> deleteSymptom(int id) async {
+    final s = await (db.select(db.symptoms)..where((t) => t.id.equals(id))).getSingle();
+    if (s.key != null) throw StateError('Systemsymptom kann nicht gelöscht werden');
+    await db.transaction(() async {
+      await (db.delete(db.dayValues)..where((v) => v.symptomId.equals(id))).go();
+      await (db.delete(db.symptoms)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
+  Future<void> saveWeather(Iterable<DayWeatherCompanion> rows) async {
+    await db.batch((b) => b.insertAllOnConflictUpdate(db.dayWeather, rows.toList()));
   }
 }

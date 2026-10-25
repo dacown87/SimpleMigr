@@ -7,7 +7,7 @@ Einfaches Migräne-Tagebuch für Android, nachgebaut nach der Papiertabelle
 
 - **Plattform:** nur Android
 - **Technik:** Flutter + Drift (SQLite), alle Daten lokal auf dem Gerät
-- **Nutzer:** eine Person, kein Konto, kein Internet
+- **Nutzer:** eine Person, kein Konto; Internet nur für den Wetterabruf (alles andere lokal, App läuft offline weiter)
 - **Leitlinie:** Die Erfassung muss **während einer Attacke** in wenigen Taps gehen.
   Alles, was nicht sofort nötig ist, kann später nachgetragen werden.
 
@@ -52,7 +52,7 @@ day_meta        date PK, new_attack (bool), note (text)
 - Gespeichert werden nur Werte ≠ 0/false. Wird ein Wert auf 0/false gesetzt, wird die Zeile gelöscht.
   `day_meta` wird gelöscht, wenn `new_attack` false und die Notiz leer ist.
 - Wird Migräne für einen Tag ausgeschaltet, wird `new_attack` für diesen Tag mit zurückgesetzt.
-- Symptome werden nur archiviert, nie gelöscht, damit alte Einträge vollständig bleiben
+- Symptome lassen sich ausblenden (Haken weg, Einträge bleiben) oder löschen (mit Rückfrage, Einträge dazu werden mitgelöscht). Systemsymptome (mit `key`) lassen sich weder ausblenden noch löschen
 - Android Auto-Backup ist aktiv (Standard, Sicherung der Datenbank in Google Drive)
 
 **Architektur (bewusst klein):**
@@ -102,7 +102,7 @@ Monatszählung: Attacken, deren erster Tag im Monat liegt
 - Unter dem Raster: „Migränetage: X · Attacken: Y“ für den Monat
 - Auslöser erscheinen als eigene Zeilen im Raster (wie Symptome, mit X)
 
-**Design:** dunkel, kontrastarm, große Schrift, weil Licht während einer Attacke oft unangenehm ist
+**Design:** zartes Rosé/Pastell (gedämpft, kein reines Weiß), große Schrift und große Felder, weil Licht während einer Attacke oft unangenehm ist
 
 ## Phasen
 
@@ -146,6 +146,13 @@ Monatszählung: Attacken, deren erster Tag im Monat liegt
 - [x] App-Icon und Name
 - [x] Release-APK bauen (signiert mit dem Debug-Key, Template-Standard) und aufs Handy installieren
 - [ ] `~/.android/debug.keystore` sichern: ohne denselben Key kein Update, nur Neuinstallation
+
+### Phase 6 – Wetter ✅
+- [x] Open-Meteo (gratis, kein Schlüssel, nicht-kommerziell, CC BY 4.0), Ort in den Einstellungen (Ortssuche), kein Gerätestandort
+- [x] Tabelle `day_weather` (Schema 2 mit Migration): Luftdruck Mittel/Min/Max, Temperatur, Feuchte, Niederschlag, Wind
+- [x] Abruf nur rund um Migräne: 3 Tage vor (der erste nur für die Druckänderung) bis 2 Tage nach jedem Lauf von Migränetagen, nur abgeschlossene Tage
+- [x] Abgleich beim Start, beim Zurückkehren in die App, nach Änderungen und bei Ortswechsel; offline = still, später erneut
+- [x] Anzeige: Wetterkarte im Tageseditor, Zeilen „Luftdruck“ und „Druck ±“ im Monatsraster (Änderung ≥ 5 hPa rosa) und im PDF
 
 ## TODO (nach v1)
 

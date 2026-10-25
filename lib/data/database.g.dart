@@ -971,12 +971,606 @@ class DayMetaCompanion extends UpdateCompanion<DayMetaData> {
   }
 }
 
+class $DayWeatherTable extends DayWeather
+    with TableInfo<$DayWeatherTable, WeatherDay> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DayWeatherTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pressureMeanMeta = const VerificationMeta(
+    'pressureMean',
+  );
+  @override
+  late final GeneratedColumn<double> pressureMean = GeneratedColumn<double>(
+    'pressure_mean',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pressureMinMeta = const VerificationMeta(
+    'pressureMin',
+  );
+  @override
+  late final GeneratedColumn<double> pressureMin = GeneratedColumn<double>(
+    'pressure_min',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pressureMaxMeta = const VerificationMeta(
+    'pressureMax',
+  );
+  @override
+  late final GeneratedColumn<double> pressureMax = GeneratedColumn<double>(
+    'pressure_max',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tempMinMeta = const VerificationMeta(
+    'tempMin',
+  );
+  @override
+  late final GeneratedColumn<double> tempMin = GeneratedColumn<double>(
+    'temp_min',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _tempMaxMeta = const VerificationMeta(
+    'tempMax',
+  );
+  @override
+  late final GeneratedColumn<double> tempMax = GeneratedColumn<double>(
+    'temp_max',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _humidityMeta = const VerificationMeta(
+    'humidity',
+  );
+  @override
+  late final GeneratedColumn<double> humidity = GeneratedColumn<double>(
+    'humidity',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _precipitationMeta = const VerificationMeta(
+    'precipitation',
+  );
+  @override
+  late final GeneratedColumn<double> precipitation = GeneratedColumn<double>(
+    'precipitation',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _windMaxMeta = const VerificationMeta(
+    'windMax',
+  );
+  @override
+  late final GeneratedColumn<double> windMax = GeneratedColumn<double>(
+    'wind_max',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    date,
+    pressureMean,
+    pressureMin,
+    pressureMax,
+    tempMin,
+    tempMax,
+    humidity,
+    precipitation,
+    windMax,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'day_weather';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WeatherDay> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('pressure_mean')) {
+      context.handle(
+        _pressureMeanMeta,
+        pressureMean.isAcceptableOrUnknown(
+          data['pressure_mean']!,
+          _pressureMeanMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pressure_min')) {
+      context.handle(
+        _pressureMinMeta,
+        pressureMin.isAcceptableOrUnknown(
+          data['pressure_min']!,
+          _pressureMinMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pressure_max')) {
+      context.handle(
+        _pressureMaxMeta,
+        pressureMax.isAcceptableOrUnknown(
+          data['pressure_max']!,
+          _pressureMaxMeta,
+        ),
+      );
+    }
+    if (data.containsKey('temp_min')) {
+      context.handle(
+        _tempMinMeta,
+        tempMin.isAcceptableOrUnknown(data['temp_min']!, _tempMinMeta),
+      );
+    }
+    if (data.containsKey('temp_max')) {
+      context.handle(
+        _tempMaxMeta,
+        tempMax.isAcceptableOrUnknown(data['temp_max']!, _tempMaxMeta),
+      );
+    }
+    if (data.containsKey('humidity')) {
+      context.handle(
+        _humidityMeta,
+        humidity.isAcceptableOrUnknown(data['humidity']!, _humidityMeta),
+      );
+    }
+    if (data.containsKey('precipitation')) {
+      context.handle(
+        _precipitationMeta,
+        precipitation.isAcceptableOrUnknown(
+          data['precipitation']!,
+          _precipitationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('wind_max')) {
+      context.handle(
+        _windMaxMeta,
+        windMax.isAcceptableOrUnknown(data['wind_max']!, _windMaxMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {date};
+  @override
+  WeatherDay map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WeatherDay(
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date'],
+      )!,
+      pressureMean: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pressure_mean'],
+      ),
+      pressureMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pressure_min'],
+      ),
+      pressureMax: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}pressure_max'],
+      ),
+      tempMin: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}temp_min'],
+      ),
+      tempMax: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}temp_max'],
+      ),
+      humidity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}humidity'],
+      ),
+      precipitation: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}precipitation'],
+      ),
+      windMax: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}wind_max'],
+      ),
+    );
+  }
+
+  @override
+  $DayWeatherTable createAlias(String alias) {
+    return $DayWeatherTable(attachedDatabase, alias);
+  }
+}
+
+class WeatherDay extends DataClass implements Insertable<WeatherDay> {
+  final String date;
+  final double? pressureMean;
+  final double? pressureMin;
+  final double? pressureMax;
+  final double? tempMin;
+  final double? tempMax;
+  final double? humidity;
+  final double? precipitation;
+  final double? windMax;
+  const WeatherDay({
+    required this.date,
+    this.pressureMean,
+    this.pressureMin,
+    this.pressureMax,
+    this.tempMin,
+    this.tempMax,
+    this.humidity,
+    this.precipitation,
+    this.windMax,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['date'] = Variable<String>(date);
+    if (!nullToAbsent || pressureMean != null) {
+      map['pressure_mean'] = Variable<double>(pressureMean);
+    }
+    if (!nullToAbsent || pressureMin != null) {
+      map['pressure_min'] = Variable<double>(pressureMin);
+    }
+    if (!nullToAbsent || pressureMax != null) {
+      map['pressure_max'] = Variable<double>(pressureMax);
+    }
+    if (!nullToAbsent || tempMin != null) {
+      map['temp_min'] = Variable<double>(tempMin);
+    }
+    if (!nullToAbsent || tempMax != null) {
+      map['temp_max'] = Variable<double>(tempMax);
+    }
+    if (!nullToAbsent || humidity != null) {
+      map['humidity'] = Variable<double>(humidity);
+    }
+    if (!nullToAbsent || precipitation != null) {
+      map['precipitation'] = Variable<double>(precipitation);
+    }
+    if (!nullToAbsent || windMax != null) {
+      map['wind_max'] = Variable<double>(windMax);
+    }
+    return map;
+  }
+
+  DayWeatherCompanion toCompanion(bool nullToAbsent) {
+    return DayWeatherCompanion(
+      date: Value(date),
+      pressureMean: pressureMean == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pressureMean),
+      pressureMin: pressureMin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pressureMin),
+      pressureMax: pressureMax == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pressureMax),
+      tempMin: tempMin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tempMin),
+      tempMax: tempMax == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tempMax),
+      humidity: humidity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(humidity),
+      precipitation: precipitation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(precipitation),
+      windMax: windMax == null && nullToAbsent
+          ? const Value.absent()
+          : Value(windMax),
+    );
+  }
+
+  factory WeatherDay.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WeatherDay(
+      date: serializer.fromJson<String>(json['date']),
+      pressureMean: serializer.fromJson<double?>(json['pressureMean']),
+      pressureMin: serializer.fromJson<double?>(json['pressureMin']),
+      pressureMax: serializer.fromJson<double?>(json['pressureMax']),
+      tempMin: serializer.fromJson<double?>(json['tempMin']),
+      tempMax: serializer.fromJson<double?>(json['tempMax']),
+      humidity: serializer.fromJson<double?>(json['humidity']),
+      precipitation: serializer.fromJson<double?>(json['precipitation']),
+      windMax: serializer.fromJson<double?>(json['windMax']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'date': serializer.toJson<String>(date),
+      'pressureMean': serializer.toJson<double?>(pressureMean),
+      'pressureMin': serializer.toJson<double?>(pressureMin),
+      'pressureMax': serializer.toJson<double?>(pressureMax),
+      'tempMin': serializer.toJson<double?>(tempMin),
+      'tempMax': serializer.toJson<double?>(tempMax),
+      'humidity': serializer.toJson<double?>(humidity),
+      'precipitation': serializer.toJson<double?>(precipitation),
+      'windMax': serializer.toJson<double?>(windMax),
+    };
+  }
+
+  WeatherDay copyWith({
+    String? date,
+    Value<double?> pressureMean = const Value.absent(),
+    Value<double?> pressureMin = const Value.absent(),
+    Value<double?> pressureMax = const Value.absent(),
+    Value<double?> tempMin = const Value.absent(),
+    Value<double?> tempMax = const Value.absent(),
+    Value<double?> humidity = const Value.absent(),
+    Value<double?> precipitation = const Value.absent(),
+    Value<double?> windMax = const Value.absent(),
+  }) => WeatherDay(
+    date: date ?? this.date,
+    pressureMean: pressureMean.present ? pressureMean.value : this.pressureMean,
+    pressureMin: pressureMin.present ? pressureMin.value : this.pressureMin,
+    pressureMax: pressureMax.present ? pressureMax.value : this.pressureMax,
+    tempMin: tempMin.present ? tempMin.value : this.tempMin,
+    tempMax: tempMax.present ? tempMax.value : this.tempMax,
+    humidity: humidity.present ? humidity.value : this.humidity,
+    precipitation: precipitation.present
+        ? precipitation.value
+        : this.precipitation,
+    windMax: windMax.present ? windMax.value : this.windMax,
+  );
+  WeatherDay copyWithCompanion(DayWeatherCompanion data) {
+    return WeatherDay(
+      date: data.date.present ? data.date.value : this.date,
+      pressureMean: data.pressureMean.present
+          ? data.pressureMean.value
+          : this.pressureMean,
+      pressureMin: data.pressureMin.present
+          ? data.pressureMin.value
+          : this.pressureMin,
+      pressureMax: data.pressureMax.present
+          ? data.pressureMax.value
+          : this.pressureMax,
+      tempMin: data.tempMin.present ? data.tempMin.value : this.tempMin,
+      tempMax: data.tempMax.present ? data.tempMax.value : this.tempMax,
+      humidity: data.humidity.present ? data.humidity.value : this.humidity,
+      precipitation: data.precipitation.present
+          ? data.precipitation.value
+          : this.precipitation,
+      windMax: data.windMax.present ? data.windMax.value : this.windMax,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WeatherDay(')
+          ..write('date: $date, ')
+          ..write('pressureMean: $pressureMean, ')
+          ..write('pressureMin: $pressureMin, ')
+          ..write('pressureMax: $pressureMax, ')
+          ..write('tempMin: $tempMin, ')
+          ..write('tempMax: $tempMax, ')
+          ..write('humidity: $humidity, ')
+          ..write('precipitation: $precipitation, ')
+          ..write('windMax: $windMax')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    date,
+    pressureMean,
+    pressureMin,
+    pressureMax,
+    tempMin,
+    tempMax,
+    humidity,
+    precipitation,
+    windMax,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WeatherDay &&
+          other.date == this.date &&
+          other.pressureMean == this.pressureMean &&
+          other.pressureMin == this.pressureMin &&
+          other.pressureMax == this.pressureMax &&
+          other.tempMin == this.tempMin &&
+          other.tempMax == this.tempMax &&
+          other.humidity == this.humidity &&
+          other.precipitation == this.precipitation &&
+          other.windMax == this.windMax);
+}
+
+class DayWeatherCompanion extends UpdateCompanion<WeatherDay> {
+  final Value<String> date;
+  final Value<double?> pressureMean;
+  final Value<double?> pressureMin;
+  final Value<double?> pressureMax;
+  final Value<double?> tempMin;
+  final Value<double?> tempMax;
+  final Value<double?> humidity;
+  final Value<double?> precipitation;
+  final Value<double?> windMax;
+  final Value<int> rowid;
+  const DayWeatherCompanion({
+    this.date = const Value.absent(),
+    this.pressureMean = const Value.absent(),
+    this.pressureMin = const Value.absent(),
+    this.pressureMax = const Value.absent(),
+    this.tempMin = const Value.absent(),
+    this.tempMax = const Value.absent(),
+    this.humidity = const Value.absent(),
+    this.precipitation = const Value.absent(),
+    this.windMax = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DayWeatherCompanion.insert({
+    required String date,
+    this.pressureMean = const Value.absent(),
+    this.pressureMin = const Value.absent(),
+    this.pressureMax = const Value.absent(),
+    this.tempMin = const Value.absent(),
+    this.tempMax = const Value.absent(),
+    this.humidity = const Value.absent(),
+    this.precipitation = const Value.absent(),
+    this.windMax = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : date = Value(date);
+  static Insertable<WeatherDay> custom({
+    Expression<String>? date,
+    Expression<double>? pressureMean,
+    Expression<double>? pressureMin,
+    Expression<double>? pressureMax,
+    Expression<double>? tempMin,
+    Expression<double>? tempMax,
+    Expression<double>? humidity,
+    Expression<double>? precipitation,
+    Expression<double>? windMax,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (date != null) 'date': date,
+      if (pressureMean != null) 'pressure_mean': pressureMean,
+      if (pressureMin != null) 'pressure_min': pressureMin,
+      if (pressureMax != null) 'pressure_max': pressureMax,
+      if (tempMin != null) 'temp_min': tempMin,
+      if (tempMax != null) 'temp_max': tempMax,
+      if (humidity != null) 'humidity': humidity,
+      if (precipitation != null) 'precipitation': precipitation,
+      if (windMax != null) 'wind_max': windMax,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DayWeatherCompanion copyWith({
+    Value<String>? date,
+    Value<double?>? pressureMean,
+    Value<double?>? pressureMin,
+    Value<double?>? pressureMax,
+    Value<double?>? tempMin,
+    Value<double?>? tempMax,
+    Value<double?>? humidity,
+    Value<double?>? precipitation,
+    Value<double?>? windMax,
+    Value<int>? rowid,
+  }) {
+    return DayWeatherCompanion(
+      date: date ?? this.date,
+      pressureMean: pressureMean ?? this.pressureMean,
+      pressureMin: pressureMin ?? this.pressureMin,
+      pressureMax: pressureMax ?? this.pressureMax,
+      tempMin: tempMin ?? this.tempMin,
+      tempMax: tempMax ?? this.tempMax,
+      humidity: humidity ?? this.humidity,
+      precipitation: precipitation ?? this.precipitation,
+      windMax: windMax ?? this.windMax,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (pressureMean.present) {
+      map['pressure_mean'] = Variable<double>(pressureMean.value);
+    }
+    if (pressureMin.present) {
+      map['pressure_min'] = Variable<double>(pressureMin.value);
+    }
+    if (pressureMax.present) {
+      map['pressure_max'] = Variable<double>(pressureMax.value);
+    }
+    if (tempMin.present) {
+      map['temp_min'] = Variable<double>(tempMin.value);
+    }
+    if (tempMax.present) {
+      map['temp_max'] = Variable<double>(tempMax.value);
+    }
+    if (humidity.present) {
+      map['humidity'] = Variable<double>(humidity.value);
+    }
+    if (precipitation.present) {
+      map['precipitation'] = Variable<double>(precipitation.value);
+    }
+    if (windMax.present) {
+      map['wind_max'] = Variable<double>(windMax.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DayWeatherCompanion(')
+          ..write('date: $date, ')
+          ..write('pressureMean: $pressureMean, ')
+          ..write('pressureMin: $pressureMin, ')
+          ..write('pressureMax: $pressureMax, ')
+          ..write('tempMin: $tempMin, ')
+          ..write('tempMax: $tempMax, ')
+          ..write('humidity: $humidity, ')
+          ..write('precipitation: $precipitation, ')
+          ..write('windMax: $windMax, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $SymptomsTable symptoms = $SymptomsTable(this);
   late final $DayValuesTable dayValues = $DayValuesTable(this);
   late final $DayMetaTable dayMeta = $DayMetaTable(this);
+  late final $DayWeatherTable dayWeather = $DayWeatherTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -985,6 +1579,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     symptoms,
     dayValues,
     dayMeta,
+    dayWeather,
   ];
 }
 
@@ -1762,6 +2357,294 @@ typedef $$DayMetaTableProcessedTableManager =
       DayMetaData,
       PrefetchHooks Function()
     >;
+typedef $$DayWeatherTableCreateCompanionBuilder = DayWeatherCompanion Function({
+  required String date,
+  Value<double?> pressureMean,
+  Value<double?> pressureMin,
+  Value<double?> pressureMax,
+  Value<double?> tempMin,
+  Value<double?> tempMax,
+  Value<double?> humidity,
+  Value<double?> precipitation,
+  Value<double?> windMax,
+  Value<int> rowid,
+});
+typedef $$DayWeatherTableUpdateCompanionBuilder = DayWeatherCompanion Function({
+  Value<String> date,
+  Value<double?> pressureMean,
+  Value<double?> pressureMin,
+  Value<double?> pressureMax,
+  Value<double?> tempMin,
+  Value<double?> tempMax,
+  Value<double?> humidity,
+  Value<double?> precipitation,
+  Value<double?> windMax,
+  Value<int> rowid,
+});
+
+class $$DayWeatherTableFilterComposer
+    extends Composer<_$AppDatabase, $DayWeatherTable> {
+  $$DayWeatherTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pressureMean => $composableBuilder(
+    column: $table.pressureMean,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pressureMin => $composableBuilder(
+    column: $table.pressureMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pressureMax => $composableBuilder(
+    column: $table.pressureMax,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get tempMin => $composableBuilder(
+    column: $table.tempMin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get tempMax => $composableBuilder(
+    column: $table.tempMax,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get humidity => $composableBuilder(
+    column: $table.humidity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get precipitation => $composableBuilder(
+    column: $table.precipitation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get windMax => $composableBuilder(
+    column: $table.windMax,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DayWeatherTableOrderingComposer
+    extends Composer<_$AppDatabase, $DayWeatherTable> {
+  $$DayWeatherTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pressureMean => $composableBuilder(
+    column: $table.pressureMean,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pressureMin => $composableBuilder(
+    column: $table.pressureMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pressureMax => $composableBuilder(
+    column: $table.pressureMax,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get tempMin => $composableBuilder(
+    column: $table.tempMin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get tempMax => $composableBuilder(
+    column: $table.tempMax,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get humidity => $composableBuilder(
+    column: $table.humidity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get precipitation => $composableBuilder(
+    column: $table.precipitation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get windMax => $composableBuilder(
+    column: $table.windMax,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DayWeatherTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DayWeatherTable> {
+  $$DayWeatherTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<double> get pressureMean => $composableBuilder(
+    column: $table.pressureMean,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get pressureMin => $composableBuilder(
+    column: $table.pressureMin,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get pressureMax => $composableBuilder(
+    column: $table.pressureMax,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get tempMin =>
+      $composableBuilder(column: $table.tempMin, builder: (column) => column);
+
+  GeneratedColumn<double> get tempMax =>
+      $composableBuilder(column: $table.tempMax, builder: (column) => column);
+
+  GeneratedColumn<double> get humidity =>
+      $composableBuilder(column: $table.humidity, builder: (column) => column);
+
+  GeneratedColumn<double> get precipitation => $composableBuilder(
+    column: $table.precipitation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get windMax =>
+      $composableBuilder(column: $table.windMax, builder: (column) => column);
+}
+
+class $$DayWeatherTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DayWeatherTable,
+          WeatherDay,
+          $$DayWeatherTableFilterComposer,
+          $$DayWeatherTableOrderingComposer,
+          $$DayWeatherTableAnnotationComposer,
+          $$DayWeatherTableCreateCompanionBuilder,
+          $$DayWeatherTableUpdateCompanionBuilder,
+          (
+            WeatherDay,
+            BaseReferences<_$AppDatabase, $DayWeatherTable, WeatherDay>,
+          ),
+          WeatherDay,
+          PrefetchHooks Function()
+        > {
+  $$DayWeatherTableTableManager(_$AppDatabase db, $DayWeatherTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DayWeatherTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DayWeatherTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DayWeatherTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> date = const Value.absent(),
+                Value<double?> pressureMean = const Value.absent(),
+                Value<double?> pressureMin = const Value.absent(),
+                Value<double?> pressureMax = const Value.absent(),
+                Value<double?> tempMin = const Value.absent(),
+                Value<double?> tempMax = const Value.absent(),
+                Value<double?> humidity = const Value.absent(),
+                Value<double?> precipitation = const Value.absent(),
+                Value<double?> windMax = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DayWeatherCompanion(
+                date: date,
+                pressureMean: pressureMean,
+                pressureMin: pressureMin,
+                pressureMax: pressureMax,
+                tempMin: tempMin,
+                tempMax: tempMax,
+                humidity: humidity,
+                precipitation: precipitation,
+                windMax: windMax,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String date,
+                Value<double?> pressureMean = const Value.absent(),
+                Value<double?> pressureMin = const Value.absent(),
+                Value<double?> pressureMax = const Value.absent(),
+                Value<double?> tempMin = const Value.absent(),
+                Value<double?> tempMax = const Value.absent(),
+                Value<double?> humidity = const Value.absent(),
+                Value<double?> precipitation = const Value.absent(),
+                Value<double?> windMax = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DayWeatherCompanion.insert(
+                date: date,
+                pressureMean: pressureMean,
+                pressureMin: pressureMin,
+                pressureMax: pressureMax,
+                tempMin: tempMin,
+                tempMax: tempMax,
+                humidity: humidity,
+                precipitation: precipitation,
+                windMax: windMax,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$DayWeatherTable, WeatherDay>(table),
+                  BaseReferences<_$AppDatabase, $DayWeatherTable, WeatherDay>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DayWeatherTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DayWeatherTable,
+      WeatherDay,
+      $$DayWeatherTableFilterComposer,
+      $$DayWeatherTableOrderingComposer,
+      $$DayWeatherTableAnnotationComposer,
+      $$DayWeatherTableCreateCompanionBuilder,
+      $$DayWeatherTableUpdateCompanionBuilder,
+      (WeatherDay, BaseReferences<_$AppDatabase, $DayWeatherTable, WeatherDay>),
+      WeatherDay,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1772,4 +2655,6 @@ class $AppDatabaseManager {
       $$DayValuesTableTableManager(_db, _db.dayValues);
   $$DayMetaTableTableManager get dayMeta =>
       $$DayMetaTableTableManager(_db, _db.dayMeta);
+  $$DayWeatherTableTableManager get dayWeather =>
+      $$DayWeatherTableTableManager(_db, _db.dayWeather);
 }
