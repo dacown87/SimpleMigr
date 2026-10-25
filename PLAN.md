@@ -31,24 +31,57 @@ Beispiel 2.–6.9. mit `/` am 4.9. ergibt zwei Attacken.
 ## Datenmodell (Drift)
 
 ```
-symptoms        id, name, kind (flag | scale0to3), group (general | aura),
-                color, sort_order, is_system, archived
-                vorbelegt: Migräne (gelb, System), Schmerzen (0–3, System),
-                Periode (rot), Übelkeit, Aura;
-                Aura-Gruppe: Sicht, Sprache
+symptoms        id, name, kind (flag | scale0to3), grp (general | aura | trigger),
+                key (NULL oder fester Systemschlüssel, UNIQUE), sort_order, archived
+                vorbelegt general: Migräne (key=migraine), Schmerzen (key=pain, 0–3),
+                                   Periode (key=period), Aura (key=aura), Übelkeit
+                vorbelegt aura:    Sicht, Sprache
+                vorbelegt trigger: Stress, Schlafmangel, Wetter, Alkohol,
+                                   Mahlzeit ausgelassen, Bildschirm
 
 day_values      date, symptom_id, value            PK(date, symptom_id)
 day_meta        date PK, new_attack (bool), note (text)
-triggers        id, name, sort_order, archived
-                vorbelegt: Stress, Schlafmangel, Wetter, Alkohol,
-                Mahlzeit ausgelassen, Bildschirm
-day_triggers    date, trigger_id                   PK(date, trigger_id)
 ```
 
-- Datum als `TEXT` im Format `YYYY-MM-DD`
-- Tage ohne Eintrag werden nicht gespeichert
-- Symptome und Auslöser werden nur archiviert, nie gelöscht, damit alte Einträge vollständig bleiben
-- Android Auto-Backup ist aktiv (Sicherung der Datenbank in Google Drive)
+- Auslöser sind Symptome der Gruppe `trigger` (Typ `flag`). Dadurch gibt es nur
+  eine Liste, eine Speicherlogik und einen Einstellungsbildschirm.
+- Systemsymptome werden über `key` erkannt, nie über den Namen (umbenennen bleibt möglich).
+  Symptome mit `key` können nicht archiviert werden.
+- Farben hängen fest am `key`: `migraine` gelb, `period` rot, alles andere neutral.
+- Datum als `TEXT` im Format `YYYY-MM-DD`, immer lokale Zeit, erzeugt nur über eine Hilfsfunktion
+- Gespeichert werden nur Werte ≠ 0/false. Wird ein Wert auf 0/false gesetzt, wird die Zeile gelöscht.
+  `day_meta` wird gelöscht, wenn `new_attack` false und die Notiz leer ist.
+- Wird Migräne für einen Tag ausgeschaltet, wird `new_attack` für diesen Tag mit zurückgesetzt.
+- Symptome werden nur archiviert, nie gelöscht, damit alte Einträge vollständig bleiben
+- Android Auto-Backup ist aktiv (Standard, Sicherung der Datenbank in Google Drive)
+
+**Architektur (bewusst klein):**
+
+```
+UI (Heute, Monat, Einstellungen)
+   │  StreamBuilder auf Drift-watch()-Streams, kein State-Management-Paket
+   ▼
+Repository (eine Klasse)         ── attacks.dart (reine Funktion, ohne DB)
+   │
+   ▼
+Drift AppDatabase (3 Tabellen, schemaVersion 1, Vorbelegung in onCreate)
+```
+
+- Eine `DayEditor(date)`-Komponente für „Heute“ und für Tage aus dem Monatsraster
+- Jeder Tap ruft direkt eine Repository-Methode auf; die UI aktualisiert sich über den Stream
+- Repository wird einmal in `main()` erzeugt und per Konstruktor weitergereicht
+
+**Attacken zählen (reine Funktion):**
+
+```
+Eingabe: sortierte Migränetage + Tage mit new_attack
+Tag d ist Migränetag:
+   Vortag kein Migränetag      → neue Attacke
+   Vortag Migränetag, d hat /  → neue Attacke
+   sonst                       → gehört zur laufenden Attacke
+Monatszählung: Attacken, deren erster Tag im Monat liegt
+(dafür wird zusätzlich der letzte Tag des Vormonats geladen)
+```
 
 ## Bedienung
 
@@ -59,11 +92,15 @@ day_triggers    date, trigger_id                   PK(date, trigger_id)
 - „Neue Attacke“ ist nur sichtbar, wenn Migräne an ist
 - Kein Speichern-Button: jeder Tap wird sofort gespeichert
 - Eingeklappt „Mehr“: Periode, Übelkeit, eigene Symptome, Auslöser, Notiz
+- Erneutes Tippen auf das gewählte Schmerzfeld setzt den Schmerz zurück
+- „Heute“ berechnet das Datum neu, wenn die App wieder in den Vordergrund kommt (Tageswechsel)
 
 **Monat (zweiter Tab)**
 - Raster wie auf Papier: Symptomnamen fest links, Tage horizontal scrollbar
 - Farben wie auf Papier: gelb für Migräne, rot für Periode; Schmerz als Zahl, sonst X; `/` für neue Attacke
 - Ein Tag antippen öffnet dieselbe Eingabe wie „Heute“ für diesen Tag
+- Unter dem Raster: „Migränetage: X · Attacken: Y“ für den Monat
+- Auslöser erscheinen als eigene Zeilen im Raster (wie Symptome, mit X)
 
 **Design:** dunkel, kontrastarm, große Schrift, weil Licht während einer Attacke oft unangenehm ist
 
@@ -73,44 +110,48 @@ day_triggers    date, trigger_id                   PK(date, trigger_id)
 - [x] JDK 17, Flutter 3.47.8, Android SDK (Platform 36, Build-Tools 37)
 - [x] Emulator `Pixel_API36` (Pixel 7, Android 16), läuft mit KVM
 - [x] Flutter-Projekt `de.simplemigr.simplemigr` angelegt, Demo-App auf dem Emulator getestet
-- [ ] Erster Git-Commit
+- [x] Erster Git-Commit
 
-### Phase 1 – Datenbasis
-- [ ] Drift-Schema, Vorbelegung beim ersten Start
-- [ ] Repository: Tag laden/speichern/löschen, Monat laden, Symptome und Auslöser verwalten
-- [ ] Logik zum Zählen der Attacken
-- [ ] Unit-Tests (In-Memory-Datenbank)
+### Phase 1 – Datenbasis ✅
+- [x] Pakete: `drift`, `drift_flutter`, `path_provider`; dev: `drift_dev`, `build_runner`
+- [x] Drift-Schema (3 Tabellen), Vorbelegung in `onCreate`
+- [x] Datums-Hilfsfunktion (`DateTime` ↔ `YYYY-MM-DD`)
+- [x] Repository: Tag beobachten/setzen, Monat beobachten, Symptome anlegen/umbenennen/archivieren
+- [x] `attacks.dart`: Attacken zählen als reine Funktion
+- [x] Unit-Tests (siehe Testplan unten, In-Memory-Datenbank `NativeDatabase.memory()`)
 
-### Phase 2 – Kern-UI
-- [ ] Dunkles Theme, Navigation „Heute“ / „Monat“ / „Einstellungen“
-- [ ] „Heute“-Bildschirm mit sofortigem Speichern
-- [ ] Monatsraster mit Monatsnavigation
-- [ ] Tag aus dem Raster bearbeiten
-- [ ] Einstellungen: Symptome (inkl. Aura-Symptome) und Auslöser hinzufügen, umbenennen, einfärben, sortieren, archivieren
+### Phase 2 – Kern-UI (offen: Papierdaten-Abgleich)
+- [x] Dunkles Theme, Navigation „Heute“ / „Monat“ / „Einstellungen“
+- [x] „Heute“-Bildschirm mit sofortigem Speichern
+- [x] Monatsraster mit Monatsnavigation
+- [x] Tag aus dem Raster bearbeiten
+- [x] Einstellungen: eine Liste mit drei Abschnitten (Symptome, Aura, Auslöser): hinzufügen, umbenennen, archivieren
 - [ ] Papierdaten August/September 2026 als Testdaten, Abgleich mit dem Foto
+  (Fixture `test/paper_fixture_test.dart` ist synthetisch nach dem Plan-Beispiel; echte Papierdaten + Summen vom Foto fehlen noch)
 
-### Phase 3 – Erinnerung
-- [ ] Tägliche Notification, Uhrzeit einstellbar, an/aus
-- [ ] Antippen öffnet „Heute“
-- [ ] Berechtigung für Benachrichtigungen (ab Android 13) abfragen
+### Phase 3 – Erinnerung ✅
+- [x] `flutter_local_notifications` + `timezone`, täglich, **inexakt** (`inexactAllowWhileIdle`, keine Exact-Alarm-Berechtigung nötig)
+- [x] Uhrzeit einstellbar, an/aus (gespeichert in einer kleinen `settings`-Tabelle oder `shared_preferences`)
+- [x] Antippen öffnet „Heute“
+- [x] Berechtigung für Benachrichtigungen (ab Android 13) beim Einschalten abfragen; bei Ablehnung Schalter wieder aus + Hinweis
+- [x] Nach Neustart des Handys neu planen (Boot-Receiver des Plugins im Manifest)
 
-### Phase 4 – Home-Screen-Widget
-- [ ] Zeigt den heutigen Status (Migräne, Schmerz)
-- [ ] Ein Tap auf „Migräne heute“ speichert direkt, ohne die App zu öffnen
-- [ ] Button „Eintragen“ öffnet „Heute“
-- [ ] Widget aktualisiert sich, sobald in der App gespeichert wird (`home_widget`)
+### Phase 4 – PDF-Export ✅
+- [x] Pakete `pdf` + `printing` (`Printing.sharePdf` öffnet den Teilen-Dialog, kein weiteres Paket nötig)
+- [x] Zeitraum wählen (ein oder mehrere Monate), eine Seite pro Monat
+- [x] A4 quer, Tabelle wie die Papiervorlage inkl. Auslöser-Zeilen, Legende, Summenzeile
+- [x] Teilen über den Android-Teilen-Dialog (Mail, Messenger, Drucken)
 
-### Phase 5 – PDF-Export
-- [ ] Zeitraum wählen (ein oder mehrere Monate)
-- [ ] A4 quer, Tabelle wie die Papiervorlage, Legende, Auslöser je Tag
-- [ ] Teilen über den Android-Teilen-Dialog (Mail, Messenger, Drucken)
-
-### Phase 6 – Fertigstellen
-- [ ] App-Icon und Name
-- [ ] Release-APK bauen und aufs Handy installieren
+### Phase 5 – Fertigstellen (offen: Keystore sichern)
+- [x] App-Icon und Name
+- [x] Release-APK bauen (signiert mit dem Debug-Key, Template-Standard) und aufs Handy installieren
+- [ ] `~/.android/debug.keystore` sichern: ohne denselben Key kein Update, nur Neuinstallation
 
 ## TODO (nach v1)
 
+- Home-Screen-Widget (`home_widget`): Status anzeigen, „Eintragen“ öffnet „Heute“;
+  direktes Speichern ohne App-Start erst danach (braucht Hintergrund-Isolate, der parallel zur App in die DB schreibt)
+- Farben und Reihenfolge eigener Symptome einstellbar
 - Statistik (Migränetage, Attacken, Schmerz-Durchschnitt, Zusammenhang mit der Periode)
 - CSV-Export
 - Backup/Restore als Datei
@@ -124,3 +165,126 @@ emulator -avd Pixel_API36 &      # Emulator starten
 flutter run                      # im Projektordner ausführen
 flutter test                     # Tests
 ```
+
+## Testplan (Pflicht für Phase 1 und 2)
+
+```
+CODE-PFADE                                           NUTZERABLÄUFE
+[+] lib/data/dates.dart                              [+] „Heute“ während Attacke
+  ├── [GAP] toKey/fromKey, Monatsgrenzen, Schaltjahr   ├── [GAP] Migräne an → sofort gespeichert, Neustart → noch da
+  └── [GAP] Tage eines Monats (28/29/30/31)            ├── [GAP] Schmerz 2 → 2 erneut tippen → zurückgesetzt
+[+] lib/data/attacks.dart (reine Funktion)           ├── [GAP] Aura an → Aura-Symptome sichtbar; aus → versteckt
+  ├── [GAP] leer → 0                                   └── [GAP] „Neue Attacke“ nur sichtbar, wenn Migräne an
+  ├── [GAP] 2.–6.9. ohne / → 1                       [+] Monat
+  ├── [GAP] 2.–6.9. mit / am 4.9. → 2 (Beispiel)       ├── [GAP] Raster zeigt gelb/rot/Zahl/X//
+  ├── [GAP] / am ersten Tag einer Folge → 1, nicht 2   ├── [GAP] Tag antippen → DayEditor für diesen Tag
+  ├── [GAP] Lücke 2.,4. → 2                            └── [GAP] Papierdaten Aug/Sep 2026: Summen = Foto
+  └── [GAP] Attacke 30.8.–2.9.: zählt im Aug, nicht Sep [+] Einstellungen
+[+] lib/data/repository.dart (In-Memory-DB)            ├── [GAP] Auslöser anlegen → erscheint in „Mehr“
+  ├── [GAP] Vorbelegung: alle Symptome + keys da       └── [GAP] Systemsymptom: kein Archivieren möglich
+  ├── [GAP] Wert setzen → Zeile; 0/false → gelöscht
+  ├── [GAP] Migräne aus → new_attack gelöscht
+  ├── [GAP] Notiz leer + kein / → day_meta gelöscht
+  ├── [GAP] Archiviertes Symptom: alte Werte im Monat sichtbar, nicht mehr in „Heute“
+  ├── [GAP] Umbenennen ändert key nicht
+  └── [GAP] Monat beobachten liefert Update nach Schreiben (Stream)
+
+COVERAGE: 0/26 (Greenfield, alles geplant) | Unit: 19 | Widget-Tests: 7
+```
+
+- Unit-Tests: `test/dates_test.dart`, `test/attacks_test.dart`, `test/repository_test.dart` (mit `NativeDatabase.memory()`)
+- Widget-Tests: `test/day_editor_test.dart`, `test/month_grid_test.dart` mit In-Memory-Repository
+- Die Papierdaten Aug/Sep 2026 werden als Test-Fixture abgelegt und im Test gegen die Summen vom Foto geprüft
+- Erinnerung und PDF: manuell auf dem Emulator prüfen (Notification kommt, PDF öffnet Teilen-Dialog), plus ein Unit-Test, dass der PDF-Builder für einen leeren und einen vollen Monat ohne Fehler ein Dokument erzeugt
+
+## Eng Review (2026-10-25)
+
+Alle Entscheidungen hat der Reviewer getroffen (Vorgabe Patrick: „du triffst alle Entscheidungen, es soll simpel sein“).
+Die angenommenen Änderungen sind oben im Plan bereits eingearbeitet.
+
+### Entscheidungen
+
+| ID | Befund | Entscheidung |
+|---|---|---|
+| S1 | [P1] (9/10) Phase 4 Widget mit Direkt-Speichern braucht Hintergrund-Isolate, der parallel zur App in dieselbe SQLite-DB schreibt, plus Sync zurück ins Widget. Komplexester Teil, wenig Nutzen (App öffnen = 1 Tap mehr). | Widget komplett nach v1 verschoben |
+| S2 | [P2] (8/10) `triggers`/`day_triggers` duplizieren `symptoms`/`day_values` (gleiche Struktur: Liste, archivieren, ja/nein je Tag). | Auslöser = Symptome mit `grp=trigger`; 2 Tabellen weniger, ein Einstellungsbildschirm |
+| S3 | [P3] (7/10) Einfärben und Sortieren eigener Symptome kosten UI ohne Kernnutzen. | Gestrichen, als TODO notiert |
+| A1 | [P1] (8/10) Attackenzählung und Farben müssen „Migräne“ finden; über Namen bricht das beim Umbenennen, `is_system` sagt nicht *welches*. | Spalte `key` (migraine/pain/period/aura), Farben fest am Key, `color`/`is_system` entfallen |
+| A2 | [P2] (8/10) Kein State-Management festgelegt; Gefahr, Riverpod/Bloc einzuführen. | Drift `watch()` + `StreamBuilder`, Repository per Konstruktor |
+| A3 | [P2] (8/10) Attacken über Monatsgrenze und `/` am ersten Tag einer Folge nicht definiert. | Regel festgelegt (siehe „Attacken zählen“), zählt im Startmonat |
+| A4 | [P2] (7/10) Release-APK mit Template-Debug-Key; geht der Key verloren, ist kein Update mehr möglich (nur Neuinstallation). | Debug-Key behalten, aber sichern (simpelste Lösung für eine Person) |
+| C1 | [P2] (8/10) „Tage ohne Eintrag werden nicht gespeichert“, aber unklar, was beim Zurücksetzen passiert. | 0/false löscht die Zeile; leeres `day_meta` wird gelöscht |
+| C2 | [P2] (8/10) „Neue Attacke“ ist nur bei Migräne sichtbar, bleibt aber gespeichert, wenn Migräne danach ausgeschaltet wird → falsche Zählung, unsichtbar. | Migräne aus setzt `new_attack` zurück |
+| C3 | [P3] (7/10) App bleibt über Mitternacht offen → „Heute“ zeigt den Vortag und speichert dorthin. | Datum beim Zurückkehren in den Vordergrund neu berechnen |
+| T1 | [P1] (9/10) Plan nennt nur „Unit-Tests“. | Testplan oben ergänzt (26 Fälle) |
+
+Performance: keine Befunde. Ein Monat sind ~31 × 20 Zellen aus einer Abfrage, Streams nur für den sichtbaren Monat.
+
+### Nicht im Umfang
+- Home-Screen-Widget: nach v1 (S1)
+- Farben/Sortierung eigener Symptome: nach v1 (S3)
+- Exakte Erinnerungszeit (Exact-Alarm-Berechtigung): inexakt reicht für eine Tageserinnerung
+- Schema-Migrationen: v1 bleibt `schemaVersion 1`; erst bei der ersten Änderung `drift_dev schema dump` einführen
+- Statistik, CSV, Backup-Datei, Medikamente: wie bisher in TODO
+
+### Was es schon gibt
+- Flutter-Projekt-Gerüst (`lib/main.dart` ist noch die Demo-App), Debug-Signing im Template (`android/app/build.gradle.kts:36`)
+- `printing` bringt Teilen/Drucken mit, kein `share_plus` nötig
+- `drift_flutter` öffnet die DB inkl. Pfad, kein eigener Pfad-Code nötig
+- Android Auto-Backup ist ohne Konfiguration aktiv (`allowBackup` Standard true)
+
+### Fehlerfälle
+| Pfad | Realistischer Fehler | Abgedeckt |
+|---|---|---|
+| Tap speichern | Schreibfehler (Speicher voll) | Drift wirft; global abfangen und SnackBar „Nicht gespeichert“. Kein Test, aber sichtbar |
+| Attacken zählen | `/` bleibt nach Migräne-aus stehen | C2 + Repository-Test |
+| Tageswechsel | Eintrag landet auf Vortag | C3, manuell prüfen |
+| Erinnerung | Berechtigung abgelehnt / nach Neustart weg | Schalter zurück + Hinweis; Boot-Receiver; manuell prüfen |
+| Update der App | anderer Signierschlüssel | A4 Key sichern |
+
+Kritische Lücken (kein Test, keine Behandlung, still): keine.
+
+### Parallelisierung
+Sequenzielle Umsetzung, keine sinnvolle Parallelisierung (ein Modul, eine Person, Phase 2 hängt an Phase 1).
+
+## Implementation Tasks
+Aus den Befunden oben abgeleitet. Abhaken beim Umsetzen.
+
+- [x] **T1 (P1, human: ~1 Tag / CC: ~20min)** — data — Drift-Schema mit `key`, Auslöser als Symptome, Vorbelegung
+  - Befund: S2, A1
+  - Dateien: `lib/data/database.dart`, `lib/data/repository.dart`
+  - Prüfen: `flutter test test/repository_test.dart`
+- [x] **T2 (P1, human: ~2h / CC: ~10min)** — data — Attackenzählung als reine Funktion mit Monatsregel
+  - Befund: A3
+  - Dateien: `lib/data/attacks.dart`, `test/attacks_test.dart`
+  - Prüfen: `flutter test test/attacks_test.dart`
+- [x] **T3 (P1, human: ~2h / CC: ~10min)** — data — Speicherregeln 0/false löschen, `/` mit Migräne zurücksetzen
+  - Befund: C1, C2
+  - Dateien: `lib/data/repository.dart`, `test/repository_test.dart`
+  - Prüfen: `flutter test`
+- [x] **T4 (P1, human: ~1 Tag / CC: ~30min)** — tests — Testplan umsetzen inkl. Papier-Fixture Aug/Sep 2026
+  - Befund: T1
+  - Dateien: `test/`
+  - Prüfen: `flutter test`
+- [x] **T5 (P2, human: ~1h / CC: ~5min)** — ui — „Heute“ rechnet Datum bei App-Resume neu
+  - Befund: C3
+  - Dateien: `lib/ui/today_screen.dart`
+  - Prüfen: Emulator-Uhr über Mitternacht stellen
+- [ ] **T6 (P2, human: ~15min / CC: ~2min)** — release — `~/.android/debug.keystore` sichern
+  - Befund: A4
+  - Prüfen: Kopie liegt außerhalb des Rechners
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Outside Review | codex via `/plan-eng-review` | Independent 2nd opinion | 1 | unavailable | Codex-Token abgelaufen (`codex login`), Subagent-Fallback nicht verfügbar |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | ISSUES OPEN (PLAN) | 11 issues, 0 critical gaps; alle entschieden und eingearbeitet |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | — |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+- **OUTSIDE COVERAGE:** codex, plan-review, unavailable (Auth-Fehler), keine Befunde, keine Zweitmeinung.
+- **VERDICT:** Keine Review CLEAR; alle 11 Befunde sind entschieden und als Tasks T1–T6 im Plan. Bereit zur Umsetzung ab Phase 1. eng review required
+
+NO UNRESOLVED DECISIONS
