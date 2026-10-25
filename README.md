@@ -3,8 +3,6 @@
 Einfaches Migräne-Tagebuch für Android, nachgebaut nach der Papiertabelle:
 Zeilen = Symptome, Spalten = Tage eines Monats.
 
-![Papiervorlage](docs/papier-aug-sep-2026.png)
-
 ## Download
 
 Die fertige APK gibt es unter [Releases](https://github.com/dacown87/SimpleMigr/releases/latest).
