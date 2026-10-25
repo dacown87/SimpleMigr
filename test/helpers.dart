@@ -34,3 +34,10 @@ Future<void> settle(WidgetTester tester) async {
     await tester.pump();
   }
 }
+
+/// Scrollt zu einem Eintrag einer lazy aufgebauten Liste und macht ihn ganz sichtbar.
+Future<void> reveal(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(finder, 300, scrollable: find.byType(Scrollable).first);
+  await tester.ensureVisible(finder);
+  await tester.pump();
+}

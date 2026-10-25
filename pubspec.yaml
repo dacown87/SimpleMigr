@@ -105,6 +105,6 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: assets/icon/icon.png
-  adaptive_icon_background: "#14161A"
-  adaptive_icon_foreground: assets/icon/icon_fg.png
+  image_path: assets/icon/logo_kopf_wolke.png
+  adaptive_icon_background: "#D97BA4"
+  adaptive_icon_foreground: assets/icon/logo_kopf_wolke_fg.png

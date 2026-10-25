@@ -112,21 +112,59 @@ void main() {
     expect(find.text('Symptome'), findsOneWidget);
   });
 
-  dbWidgetTest('Periode und Übelkeit sind eigene Schalter, Auslöser klappen aus', (tester, env) async {
+  dbWidgetTest('Periode ist ein Schalter; Übelkeit liegt im Block „Symptome“', (tester, env) async {
     await tester.pumpWidget(app(env));
     await settle(tester);
     expect(find.widgetWithText(SwitchListTile, 'Periode'), findsOneWidget);
-    expect(find.widgetWithText(SwitchListTile, 'Übelkeit'), findsOneWidget);
+    expect(find.widgetWithText(SwitchListTile, 'Übelkeit'), findsNothing);
     expect(find.text('Mehr'), findsNothing);
-    expect(find.text('Stress'), findsNothing); // eingeklappt
+    expect(find.text('Übelkeit'), findsNothing); // Block zu, solange der Schalter aus ist
 
     await tester.tap(find.widgetWithText(SwitchListTile, 'Periode'));
     await settle(tester);
-    final id = (await tester.runAsync(() => env.idOf(SymptomKey.period)))!;
-    expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(id), 1);
+    final period = (await tester.runAsync(() => env.idOf(SymptomKey.period)))!;
+    expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(period), 1);
 
-    await tester.tap(find.text('Auslöser'));
+    await tester.tap(find.byKey(const ValueKey('switch-Symptome')));
+    await settle(tester);
     await tester.pumpAndSettle();
+    expect(find.text('Übelkeit'), findsOneWidget);
+    await tester.tap(find.text('Übelkeit'));
+    await settle(tester);
+    final nausea = (await tester.runAsync(() => env.idOf(SymptomKey.nausea)))!;
+    expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(nausea), 1);
+
+    // Schalter aus wählt die Symptome des Tages ab und klappt zu.
+    await tester.tap(find.byKey(const ValueKey('switch-Symptome')));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(nausea), 0);
+    expect(find.text('Übelkeit'), findsNothing);
+  });
+
+  dbWidgetTest('Auslöser: Inhalt erst nach Aktivieren des Schalters', (tester, env) async {
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    expect(find.text('Stress'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('switch-Auslöser')));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Stress'), findsOneWidget);
+    await tester.tap(find.text('Stress'));
+    await settle(tester);
+    final id = (await tester.runAsync(() async =>
+        (await env.db.select(env.db.symptoms).get()).firstWhere((s) => s.name == 'Stress').id))!;
+    expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(id), 1);
+  });
+
+  dbWidgetTest('Gewählte Auslöser: Schalter von selbst an, Block offen', (tester, env) async {
+    final id = (await tester.runAsync(() async =>
+        (await env.db.select(env.db.symptoms).get()).firstWhere((s) => s.name == 'Stress').id))!;
+    await tester.runAsync(() => env.repo.setValue(today, id, 1));
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(find.byKey(const ValueKey('switch-Auslöser'))).value, isTrue);
     expect(find.text('Stress'), findsOneWidget);
   });
 
@@ -153,14 +191,16 @@ void main() {
     expect(find.text('Niederschlag 4,1 mm', skipOffstage: false), findsOneWidget);
   });
 
-  dbWidgetTest('Reihenfolge: Aura und Auslöser stehen als Blöcke unter Periode/Übelkeit', (tester, env) async {
+  dbWidgetTest('Reihenfolge: Periode, Symptome, Aura, Auslöser', (tester, env) async {
     await tester.pumpWidget(app(env));
     await settle(tester);
     double y(Finder f) => tester.getTopLeft(f).dy;
-    final nausea = y(find.widgetWithText(SwitchListTile, 'Übelkeit'));
+    final period = y(find.widgetWithText(SwitchListTile, 'Periode'));
+    final symptome = y(find.text('Symptome'));
     final aura = y(find.text('Aura'));
     final triggers = y(find.text('Auslöser'));
-    expect(aura, greaterThan(nausea));
+    expect(symptome, greaterThan(period));
+    expect(aura, greaterThan(symptome));
     expect(triggers, greaterThan(aura));
   });
 }

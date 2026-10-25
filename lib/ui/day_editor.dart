@@ -64,11 +64,12 @@ class _DayEditorState extends State<DayEditor> {
     final pain = byKey(SymptomKey.pain);
     final aura = byKey(SymptomKey.aura);
     final period = byKey(SymptomKey.period);
-    final nausea = byKey(SymptomKey.nausea);
     final auraSymptoms =
         list.where((s) => s.grp == SymptomGroup.aura).toList();
-    final custom = list
-        .where((s) => s.grp == SymptomGroup.general && s.key == null)
+    // „Symptome“: Übelkeit plus eigene allgemeine Symptome (nicht Migräne, Periode, Aura).
+    final symptomItems = list
+        .where((s) =>
+            s.grp == SymptomGroup.general && (s.key == null || s.key == SymptomKey.nausea))
         .toList();
     final triggers = list.where((s) => s.grp == SymptomGroup.trigger).toList();
 
@@ -125,19 +126,18 @@ class _DayEditorState extends State<DayEditor> {
           value: day.value(period.id) != 0,
           onChanged: (v) => setFlag(period, v),
         ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(nausea.name),
-          value: day.value(nausea.id) != 0,
-          onChanged: (v) => setFlag(nausea, v),
+        _GroupSection(
+          key: ValueKey('group-Symptome-$date'),
+          title: 'Symptome',
+          symptoms: symptomItems,
+          day: day,
+          onToggle: setFlag,
+          onClear: (items) => guarded(context, () async {
+            for (final s in items) {
+              await repo.setValue(date, s.id, 0);
+            }
+          }),
         ),
-        for (final s in custom)
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(s.name),
-            value: day.value(s.id) != 0,
-            onChanged: (v) => setFlag(s, v),
-          ),
         _Section(
           title: aura.name,
           switchValue: auraOn,
@@ -151,15 +151,17 @@ class _DayEditorState extends State<DayEditor> {
           ],
         ),
         if (triggers.isNotEmpty)
-          _Section(
+          _GroupSection(
+            key: ValueKey('group-Auslöser-$date'),
             title: 'Auslöser',
-            children: [
-              _ChipWrap(
-                symptoms: triggers,
-                day: day,
-                onToggle: (s, on) => setFlag(s, on),
-              ),
-            ],
+            symptoms: triggers,
+            day: day,
+            onToggle: setFlag,
+            onClear: (items) => guarded(context, () async {
+              for (final s in items) {
+                await repo.setValue(date, s.id, 0);
+              }
+            }),
           ),
         const SizedBox(height: 8),
         _NoteField(
@@ -171,6 +173,52 @@ class _DayEditorState extends State<DayEditor> {
           const SizedBox(height: 16),
           WeatherCard(day: day),
         ],
+      ],
+    );
+  }
+}
+
+/// Block mit Schalter für eine Gruppe von Symptomen ohne eigenes Flag (Symptome,
+/// Auslöser). Der Schalter ist an, sobald etwas gewählt ist oder der Nutzer ihn
+/// einschaltet; der Inhalt klappt erst dann auf. Ausschalten wählt alles ab.
+class _GroupSection extends StatefulWidget {
+  const _GroupSection({
+    super.key,
+    required this.title,
+    required this.symptoms,
+    required this.day,
+    required this.onToggle,
+    required this.onClear,
+  });
+
+  final String title;
+  final List<Symptom> symptoms;
+  final DayData day;
+  final void Function(Symptom, bool) onToggle;
+  final void Function(List<Symptom> selected) onClear;
+
+  @override
+  State<_GroupSection> createState() => _GroupSectionState();
+}
+
+class _GroupSectionState extends State<_GroupSection> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = [
+      for (final s in widget.symptoms)
+        if (widget.day.value(s.id) != 0) s,
+    ];
+    return _Section(
+      title: widget.title,
+      switchValue: _open || selected.isNotEmpty,
+      onSwitch: (on) {
+        setState(() => _open = on);
+        if (!on) widget.onClear(selected);
+      },
+      children: [
+        _ChipWrap(symptoms: widget.symptoms, day: widget.day, onToggle: widget.onToggle),
       ],
     );
   }

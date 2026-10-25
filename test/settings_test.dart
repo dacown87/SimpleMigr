@@ -11,8 +11,7 @@ void main() {
   dbWidgetTest('Auslöser anlegen → erscheint unter „Auslöser“', (tester, env) async {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
-    await tester.ensureVisible(find.byKey(const ValueKey('add-trigger')));
-    await tester.pump();
+    await reveal(tester, find.byKey(const ValueKey('add-trigger')));
     await tester.tap(find.byKey(const ValueKey('add-trigger')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Koffein');
@@ -25,7 +24,7 @@ void main() {
         theme: buildTheme(),
         home: TodayScreen(repo: env.repo, clock: () => DateTime(2026, 9, 4))));
     await settle(tester);
-    await tester.tap(find.text('Auslöser'));
+    await tester.tap(find.byKey(const ValueKey('switch-Auslöser')));
     await tester.pumpAndSettle();
     expect(find.text('Koffein'), findsOneWidget);
   });
@@ -42,8 +41,7 @@ void main() {
     expect(sys.onChanged, isNull);
 
     // Eigene Symptome (Auslöser) lassen sich abwählen
-    await tester.ensureVisible(find.text('Stress'));
-    await tester.pump();
+    await reveal(tester, find.text('Stress'));
     final stress = find.widgetWithText(ListTile, 'Stress');
     expect(
       tester.widget<Checkbox>(find.descendant(of: stress, matching: find.byType(Checkbox))).onChanged,
@@ -54,8 +52,7 @@ void main() {
   dbWidgetTest('Archivieren blendet Auslöser in „Heute“ aus', (tester, env) async {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
-    await tester.ensureVisible(find.text('Stress'));
-    await tester.pump();
+    await reveal(tester, find.text('Stress'));
     await tester.tap(find.descendant(
         of: find.widgetWithText(ListTile, 'Stress'), matching: find.byType(Checkbox)));
     await settle(tester);
@@ -68,8 +65,7 @@ void main() {
     await tester.runAsync(() => env.repo.setValue(DateTime(2026, 9, 4), id, 1));
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
-    await tester.ensureVisible(find.text('Koffein'));
-    await tester.pump();
+    await reveal(tester, find.text('Koffein'));
     await tester.tap(find.text('Koffein'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('delete-in-dialog')));
@@ -87,8 +83,7 @@ void main() {
     await settle(tester);
     final period = await tester.runAsync(() => env.idOf(SymptomKey.period));
     expect(find.byKey(ValueKey('dismiss-$period')), findsNothing);
-    await tester.ensureVisible(find.text('Stress'));
-    await tester.pump();
+    await reveal(tester, find.text('Stress'));
     await tester.drag(find.text('Stress'), const Offset(-600, 0));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirm-delete')));
@@ -102,8 +97,7 @@ void main() {
     await tester.runAsync(() => env.repo.setValue(DateTime(2026, 9, 4), id, 1));
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
-    await tester.ensureVisible(find.text('Käse'));
-    await tester.pump();
+    await reveal(tester, find.text('Käse'));
     await tester.tap(find.text('Käse'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('delete-in-dialog')));
