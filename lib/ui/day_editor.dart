@@ -64,6 +64,8 @@ class _DayEditorState extends State<DayEditor> {
     final pain = byKey(SymptomKey.pain);
     final aura = byKey(SymptomKey.aura);
     final period = byKey(SymptomKey.period);
+    final medication = byKey(SymptomKey.medication);
+    final medHelped = byKey(SymptomKey.medHelped);
     final auraSymptoms =
         list.where((s) => s.grp == SymptomGroup.aura).toList();
     // „Symptome“: Übelkeit plus eigene allgemeine Symptome (nicht Migräne, Periode, Aura).
@@ -75,6 +77,7 @@ class _DayEditorState extends State<DayEditor> {
 
     final migraineOn = day.value(migraine.id) != 0;
     final auraOn = day.value(aura.id) != 0;
+    final medicationOn = day.value(medication.id) != 0;
     final repo = widget.repo;
     final date = widget.date;
 
@@ -145,6 +148,22 @@ class _DayEditorState extends State<DayEditor> {
           children: [
             _ChipWrap(
               symptoms: auraSymptoms,
+              day: day,
+              onToggle: (s, on) => setFlag(s, on),
+            ),
+          ],
+        ),
+        _Section(
+          title: 'Medikamente',
+          switchValue: medicationOn,
+          // Ausschalten nimmt auch „Hat geholfen“ zurück.
+          onSwitch: (v) => guarded(context, () async {
+            await repo.setValue(date, medication.id, v ? 1 : 0);
+            if (!v) await repo.setValue(date, medHelped.id, 0);
+          }),
+          children: [
+            _ChipWrap(
+              symptoms: [medHelped],
               day: day,
               onToggle: (s, on) => setFlag(s, on),
             ),

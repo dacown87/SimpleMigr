@@ -106,7 +106,7 @@ class _PlaceDialogState extends State<_PlaceDialog> {
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _search(),
               decoration: InputDecoration(
-                hintText: 'Stadt oder Ort',
+                hintText: 'Ort oder PLZ',
                 suffixIcon: IconButton(
                   key: const ValueKey('place-search'),
                   icon: const Icon(Icons.search),

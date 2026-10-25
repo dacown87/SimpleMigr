@@ -24,7 +24,7 @@ void main() {
     final all = await db.select(db.symptoms).get();
     expect(
       all.where((s) => s.key != null).map((s) => s.key).toSet(),
-      {'migraine', 'pain', 'period', 'aura', 'nausea'},
+      {'migraine', 'pain', 'period', 'aura', 'nausea', 'medication', 'med_helped'},
     );
     expect(all.where((s) => s.grp == SymptomGroup.aura).map((s) => s.name), ['Sicht', 'Sprache']);
     expect(all.where((s) => s.grp == SymptomGroup.trigger), hasLength(6));

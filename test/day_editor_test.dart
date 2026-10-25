@@ -146,6 +146,7 @@ void main() {
     await tester.pumpWidget(app(env));
     await settle(tester);
     expect(find.text('Stress'), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('switch-Auslöser')));
     await tester.tap(find.byKey(const ValueKey('switch-Auslöser')));
     await settle(tester);
     await tester.pumpAndSettle();
@@ -155,6 +156,32 @@ void main() {
     final id = (await tester.runAsync(() async =>
         (await env.db.select(env.db.symptoms).get()).firstWhere((s) => s.name == 'Stress').id))!;
     expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(id), 1);
+  });
+
+  dbWidgetTest('Medikamente: „Hat geholfen“ erst nach dem Schalter, Ausschalten setzt zurück',
+      (tester, env) async {
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    expect(find.text('Hat geholfen'), findsNothing);
+    final sw = find.byKey(const ValueKey('switch-Medikamente'));
+    await tester.ensureVisible(sw);
+    await tester.tap(sw);
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Hat geholfen'), findsOneWidget);
+    await tester.tap(find.text('Hat geholfen'));
+    await settle(tester);
+    final ids = (await tester.runAsync(() async => {
+          for (final k in [SymptomKey.medication, SymptomKey.medHelped]) k: await env.idOf(k),
+        }))!;
+    var d = (await tester.runAsync(() => env.repo.getDay(today)))!;
+    expect(d.value(ids[SymptomKey.medication]!), 1);
+    expect(d.value(ids[SymptomKey.medHelped]!), 1);
+    await tester.tap(sw);
+    await settle(tester);
+    d = (await tester.runAsync(() => env.repo.getDay(today)))!;
+    expect(d.value(ids[SymptomKey.medication]!), 0);
+    expect(d.value(ids[SymptomKey.medHelped]!), 0);
   });
 
   dbWidgetTest('Gewählte Auslöser: Schalter von selbst an, Block offen', (tester, env) async {

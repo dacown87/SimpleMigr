@@ -14,6 +14,8 @@ class SymptomKey {
   static const period = 'period';
   static const aura = 'aura';
   static const nausea = 'nausea';
+  static const medication = 'medication';
+  static const medHelped = 'med_helped';
 }
 
 class Symptoms extends Table {
@@ -67,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'simplemigr'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -77,6 +79,23 @@ class AppDatabase extends _$AppDatabase {
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) await m.createTable(dayWeather);
+          if (from < 3) {
+            final maxOrder = symptoms.sortOrder.max();
+            final row = await (selectOnly(symptoms)..addColumns([maxOrder])).getSingle();
+            var order = (row.read(maxOrder) ?? -1) + 1;
+            for (final (name, key) in [
+              ('Medikamente genommen', SymptomKey.medication),
+              ('Hat geholfen', SymptomKey.medHelped),
+            ]) {
+              await into(symptoms).insert(SymptomsCompanion.insert(
+                name: name,
+                kind: SymptomKind.flag,
+                grp: SymptomGroup.general,
+                key: Value(key),
+                sortOrder: order++,
+              ));
+            }
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -100,6 +119,8 @@ class AppDatabase extends _$AppDatabase {
     await add('Periode', SymptomKind.flag, g, SymptomKey.period);
     await add('Aura', SymptomKind.flag, g, SymptomKey.aura);
     await add('Übelkeit', SymptomKind.flag, g, SymptomKey.nausea);
+    await add('Medikamente genommen', SymptomKind.flag, g, SymptomKey.medication);
+    await add('Hat geholfen', SymptomKind.flag, g, SymptomKey.medHelped);
     for (final n in ['Sicht', 'Sprache']) {
       await add(n, SymptomKind.flag, SymptomGroup.aura);
     }

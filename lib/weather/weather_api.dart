@@ -83,10 +83,20 @@ class OpenMeteoApi implements WeatherApi {
 
   @override
   Future<List<GeoPlace>> searchPlaces(String query) async {
+    // Open-Meteo kennt keine Postleitzahlen und keine Mehrwort-Suchen wie "64739 Höchst".
+    final plz = RegExp(r'\b\d{5}\b').firstMatch(query)?.group(0);
+    if (plz != null) {
+      final byPlz = await _searchPostalCode(plz);
+      if (byPlz.isNotEmpty) return byPlz;
+      query = query.replaceAll(plz, '');
+    }
+    query = query.split(',').first.trim();
+    if (query.isEmpty) return const [];
     final json = await _get(Uri.https('geocoding-api.open-meteo.com', '/v1/search', {
       'name': query,
       'count': '6',
       'language': 'de',
+      'countryCode': 'DE',
       'format': 'json',
     }));
     return [
@@ -95,6 +105,25 @@ class OpenMeteoApi implements WeatherApi {
           name: [r['name'], r['admin1'], r['country']].whereType<String>().join(', '),
           lat: (r['latitude'] as num).toDouble(),
           lon: (r['longitude'] as num).toDouble(),
+        ),
+    ];
+  }
+
+  /// Deutsche PLZ über zippopotam.us; unbekannte PLZ (HTTP 404) ergibt eine leere Liste.
+  Future<List<GeoPlace>> _searchPostalCode(String plz) async {
+    final uri = Uri.https('api.zippopotam.us', '/de/$plz');
+    final req = await _client.getUrl(uri);
+    final res = await req.close().timeout(const Duration(seconds: 20));
+    final body = await res.transform(utf8.decoder).join();
+    if (res.statusCode == 404) return const [];
+    if (res.statusCode != 200) throw HttpException('HTTP ${res.statusCode}', uri: uri);
+    final json = jsonDecode(body) as Map<String, dynamic>;
+    return [
+      for (final r in (json['places'] as List? ?? const []).cast<Map<String, dynamic>>())
+        GeoPlace(
+          name: '$plz ${r['place name']}, ${r['state']}, Deutschland',
+          lat: double.parse(r['latitude'] as String),
+          lon: double.parse(r['longitude'] as String),
         ),
     ];
   }
