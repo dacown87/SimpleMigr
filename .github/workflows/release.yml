@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > android/key.properties <<PROPS
+          storePassword=$KEY_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=simplemigr
+          storeFile=$RUNNER_TEMP/release.jks
+          PROPS
+      - run: flutter build apk --release
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk "SimpleMigr-${GITHUB_REF_NAME#v}.apk"
+          gh release create "$GITHUB_REF_NAME" "SimpleMigr-${GITHUB_REF_NAME#v}.apk" \
+            --title "SimpleMigr ${GITHUB_REF_NAME#v}" --generate-notes
