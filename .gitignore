@@ -52,3 +52,6 @@ key.properties
 *.jks
 *.keystore
 .kotlin/
+
+# Echte Tagebuchdaten (Gesundheitsdaten), nur lokal
+/private/
