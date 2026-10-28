@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/database.dart';
 import '../data/repository.dart';
+import 'autosave_field.dart';
 import 'theme.dart';
 import 'weather_card.dart';
 import 'util.dart';
@@ -183,8 +184,9 @@ class _DayEditorState extends State<DayEditor> {
             }),
           ),
         const SizedBox(height: 8),
-        _NoteField(
+        AutoSaveField(
           key: ValueKey(date),
+          label: 'Notiz',
           text: day.note,
           onChanged: (t) => guarded(context, () => repo.setNote(date, t)),
         ),
@@ -391,54 +393,6 @@ class _ChipWrap extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-/// Textfeld, das beim Tippen speichert, aber fremde Updates nur übernimmt,
-/// solange es nicht den Fokus hat.
-class _NoteField extends StatefulWidget {
-  const _NoteField({super.key, required this.text, required this.onChanged});
-
-  final String text;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_NoteField> createState() => _NoteFieldState();
-}
-
-class _NoteFieldState extends State<_NoteField> {
-  late final _controller = TextEditingController(text: widget.text);
-  final _focus = FocusNode();
-
-  @override
-  void didUpdateWidget(_NoteField old) {
-    super.didUpdateWidget(old);
-    if (!_focus.hasFocus && _controller.text != widget.text) {
-      _controller.text = widget.text;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: _controller,
-      focusNode: _focus,
-      minLines: 2,
-      maxLines: 5,
-      style: const TextStyle(fontSize: 18),
-      decoration: const InputDecoration(
-        labelText: 'Notiz',
-        border: OutlineInputBorder(),
-      ),
-      onChanged: widget.onChanged,
     );
   }
 }

@@ -34,7 +34,8 @@ jobs:
           keyAlias=simplemigr
           storeFile=$RUNNER_TEMP/release.jks
           PROPS
-      - run: flutter build apk --release
+      # Datum des Release-Commits, in der App unter Einstellungen > Allgemein sichtbar
+      - run: flutter build apk --release --dart-define=BUILD_DATE=$(git log -1 --format=%cs)
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

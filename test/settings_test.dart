@@ -7,10 +7,16 @@ import 'package:simplemigr/ui/today_screen.dart';
 
 import 'helpers.dart';
 
+Future<void> showGroup(WidgetTester tester, String label) async {
+  await tester.tap(find.byKey(ValueKey('entries-$label')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   dbWidgetTest('Auslöser anlegen → erscheint unter „Auslöser“', (tester, env) async {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
+    await showGroup(tester, 'Auslöser');
     await reveal(tester, find.byKey(const ValueKey('add-trigger')));
     await tester.tap(find.byKey(const ValueKey('add-trigger')));
     await tester.pumpAndSettle();
@@ -41,6 +47,7 @@ void main() {
     expect(sys.onChanged, isNull);
 
     // Eigene Symptome (Auslöser) lassen sich abwählen
+    await showGroup(tester, 'Auslöser');
     await reveal(tester, find.text('Stress'));
     final stress = find.widgetWithText(ListTile, 'Stress');
     expect(
@@ -52,6 +59,7 @@ void main() {
   dbWidgetTest('Archivieren blendet Auslöser in „Heute“ aus', (tester, env) async {
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
+    await showGroup(tester, 'Auslöser');
     await reveal(tester, find.text('Stress'));
     await tester.tap(find.descendant(
         of: find.widgetWithText(ListTile, 'Stress'), matching: find.byType(Checkbox)));
@@ -65,6 +73,7 @@ void main() {
     await tester.runAsync(() => env.repo.setValue(DateTime(2026, 9, 4), id, 1));
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
+    await showGroup(tester, 'Auslöser');
     await reveal(tester, find.text('Koffein'));
     await tester.tap(find.text('Koffein'));
     await tester.pumpAndSettle();
@@ -83,6 +92,7 @@ void main() {
     await settle(tester);
     final period = await tester.runAsync(() => env.idOf(SymptomKey.period));
     expect(find.byKey(ValueKey('dismiss-$period')), findsNothing);
+    await showGroup(tester, 'Auslöser');
     await reveal(tester, find.text('Stress'));
     await tester.drag(find.text('Stress'), const Offset(-600, 0));
     await tester.pumpAndSettle();
@@ -97,6 +107,7 @@ void main() {
     await tester.runAsync(() => env.repo.setValue(DateTime(2026, 9, 4), id, 1));
     await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
     await settle(tester);
+    await showGroup(tester, 'Auslöser');
     await reveal(tester, find.text('Käse'));
     await tester.tap(find.text('Käse'));
     await tester.pumpAndSettle();
@@ -108,6 +119,17 @@ void main() {
     expect(find.text('Käse'), findsNothing);
     final rows = (await tester.runAsync(() => env.db.select(env.db.dayValues).get()))!;
     expect(rows.where((r) => r.symptomId == id), isEmpty);
+  });
+
+  dbWidgetTest('Einträge: Segmente zeigen je eine Gruppe', (tester, env) async {
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: SettingsScreen(repo: env.repo)));
+    await settle(tester);
+    expect(find.text('Periode'), findsOneWidget);
+    expect(find.text('Sicht'), findsNothing);
+    await showGroup(tester, 'Aura');
+    expect(find.text('Sicht'), findsOneWidget);
+    expect(find.text('Periode'), findsNothing);
+    expect(find.byKey(const ValueKey('add-aura')), findsOneWidget);
   });
 
   dbWidgetTest('Löschen: Systemsymptom hat keinen Löschen-Knopf', (tester, env) async {

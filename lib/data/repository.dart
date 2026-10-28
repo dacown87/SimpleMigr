@@ -261,6 +261,45 @@ class Repository {
     );
   }
 
+  // ── Beschreibung ────────────────────────────────────────────
+
+  static const _descriptionKey = 'description';
+
+  /// Allgemeine Beschreibung der eigenen Migräne (für Arzt und PDF).
+  Stream<String> watchDescription() =>
+      (db.select(db.appTexts)..where((t) => t.key.equals(_descriptionKey)))
+          .watchSingleOrNull()
+          .map((r) => r?.value ?? '');
+
+  Future<String> getDescription() async =>
+      (await (db.select(db.appTexts)..where((t) => t.key.equals(_descriptionKey)))
+              .getSingleOrNull())
+          ?.value ??
+      '';
+
+  Future<void> setDescription(String text) async {
+    if (text.trim().isEmpty) {
+      await (db.delete(db.appTexts)..where((t) => t.key.equals(_descriptionKey))).go();
+    } else {
+      await db
+          .into(db.appTexts)
+          .insertOnConflictUpdate(AppTextsCompanion.insert(key: _descriptionKey, value: text));
+    }
+  }
+
+  /// Die Beschreibung als einzelne Punkte, je Zeile einer.
+  Stream<List<String>> watchDescriptionPoints() => watchDescription().map(descriptionPoints);
+
+  Future<void> setDescriptionPoints(List<String> points) => setDescription([
+        for (final p in points)
+          if (p.trim().isNotEmpty) p.replaceAll('\n', ' ').trim(),
+      ].join('\n'));
+
+  static List<String> descriptionPoints(String text) => [
+        for (final l in text.split('\n'))
+          if (l.trim().isNotEmpty) l.trim(),
+      ];
+
   // ── Wetter ──────────────────────────────────────────────────
 
   /// Tage vor dem ersten und nach dem letzten Migränetag jeder Attacke, für die

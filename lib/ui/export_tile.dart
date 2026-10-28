@@ -37,7 +37,7 @@ class ExportTile extends StatelessWidget {
           y++;
         }
       }
-      final bytes = await buildMonthsPdf(months);
+      final bytes = await buildMonthsPdf(months, description: await repo.getDescription());
       final first = months.first, last = months.last;
       await Printing.sharePdf(
         bytes: bytes,

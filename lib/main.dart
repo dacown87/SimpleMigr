@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'data/database.dart';
 import 'data/repository.dart';
+import 'data/transfer.dart';
 import 'reminder.dart';
+import 'ui/data_tiles.dart';
 import 'ui/export_tile.dart';
 import 'ui/reminder_tile.dart';
+import 'ui/version_tile.dart';
 import 'ui/weather_tile.dart';
 import 'update/updater.dart';
 import 'weather/weather_api.dart';
@@ -23,16 +26,31 @@ Future<void> main() async {
   });
   final weatherApi = OpenMeteoApi();
   final location = await LocationStore.load();
-  WeatherSync(repo: repo, api: weatherApi, location: location).start();
+  final weatherSync = WeatherSync(repo: repo, api: weatherApi, location: location)..start();
+  final updater = GithubUpdater();
   runApp(SimpleMigrApp(
     repo: repo,
     navigatorKey: navKey,
     shellKey: shellKey,
-    updater: GithubUpdater(),
-    settingsTiles: [
+    updater: updater,
+    generalTiles: [
       ReminderTile(reminder: reminder),
       WeatherPlaceTile(location: location, api: weatherApi),
+      VersionTile(updater: updater),
+    ],
+    dataTiles: [
       ExportTile(repo: repo),
+      DataTiles(
+        transfer: DataTransfer(repo),
+        // Importierte Migränetage bekommen ihr Wetter wie neu eingetragene.
+        afterImport: () {
+          if (location.value == null) {
+            return 'Für Wetterdaten unter „Allgemein“ einen Ort setzen.';
+          }
+          weatherSync.run();
+          return 'Wetter wird nachgeladen.';
+        },
+      ),
     ],
   ));
 }

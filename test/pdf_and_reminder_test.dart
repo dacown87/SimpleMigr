@@ -42,6 +42,12 @@ void main() {
     final bytes = await buildMonthsPdf([empty, full]);
     expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
     expect(bytes.length, greaterThan(1000));
+
+    // Beschreibung mit typografischen Zeichen als eigene erste Seite
+    final withText = await buildMonthsPdf([full],
+        description: 'Vorboten: Gähnen – dann „Blitze“ links.\n\nDauer 1–3 Tage.');
+    expect(withText.length, greaterThan(bytes.length ~/ 3));
+    expect(latin1Safe('„Blitze“ – 1…2 😖'), '"Blitze" - 1...2 ');
   });
 
   testWidgets('Erinnerung: Berechtigung abgelehnt → Schalter bleibt aus + Hinweis', (tester) async {

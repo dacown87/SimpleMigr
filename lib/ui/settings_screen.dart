@@ -9,59 +9,89 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
     super.key,
     required this.repo,
-    this.extraTiles = const [],
+    this.generalTiles = const [],
+    this.dataTiles = const [],
   });
 
   final Repository repo;
 
-  /// Zusätzliche Einträge oben (Erinnerung, Export).
-  final List<Widget> extraTiles;
+  /// Tab „Allgemein“ (Erinnerung, Wetter-Ort).
+  final List<Widget> generalTiles;
+
+  /// Tab „Daten“ (PDF-Export, Sicherung, Import).
+  final List<Widget> dataTiles;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
-      body: StreamBuilder<List<Symptom>>(
-        stream: repo.watchSymptoms(includeArchived: true),
-        builder: (context, snap) {
-          final all = snap.data;
-          if (all == null) return const SizedBox.shrink();
-          return ListView(
-            children: [
-              ...extraTiles,
-              // Fest eingebaute Einträge: nur umbenennen, nichts hinzufügen.
-              _section(
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Einstellungen'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Einträge'),
+              Tab(text: 'Allgemein'),
+              Tab(text: 'Daten'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _entries(context),
+            ListView(children: generalTiles),
+            ListView(children: dataTiles),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Eine Gruppe auf einmal, umschaltbar über Segmente statt einer langen Liste.
+  Widget _entries(BuildContext context) {
+    return StreamBuilder<List<Symptom>>(
+      stream: repo.watchSymptoms(includeArchived: true),
+      builder: (context, snap) {
+        final all = snap.data;
+        if (all == null) return const SizedBox.shrink();
+        return _EntryGroups(
+          labels: const ['Basis', 'Symptome', 'Aura', 'Auslöser'],
+          builder: (i) => switch (i) {
+            // Fest eingebaute Einträge: nur umbenennen, nichts hinzufügen.
+            0 => _section(
                 context,
                 'Grundeinträge',
+                'Fest eingebaut, lassen sich nur umbenennen.',
                 SymptomGroup.general,
                 all.where(_isBasic).toList(),
                 canAdd: false,
               ),
-              _section(
+            1 => _section(
                 context,
                 'Symptome',
+                'Erscheinen im Block „Symptome“.',
                 SymptomGroup.general,
                 all
                     .where((s) => s.grp == SymptomGroup.general && !_isBasic(s))
                     .toList(),
               ),
-              _section(
+            2 => _section(
                 context,
                 'Aura',
+                'Erscheinen, wenn Aura eingeschaltet ist.',
                 SymptomGroup.aura,
                 all.where((s) => s.grp == SymptomGroup.aura).toList(),
               ),
-              _section(
+            _ => _section(
                 context,
                 'Auslöser',
+                'Mögliche Auslöser einer Attacke.',
                 SymptomGroup.trigger,
                 all.where((s) => s.grp == SymptomGroup.trigger).toList(),
               ),
-              const SizedBox(height: 24),
-            ],
-          );
-        },
-      ),
+          },
+        );
+      },
     );
   }
 
@@ -78,6 +108,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _section(
     BuildContext context,
     String title,
+    String hint,
     SymptomGroup grp,
     List<Symptom> items, {
     bool canAdd = true,
@@ -91,8 +122,8 @@ class SettingsScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  hint,
+                  style: const TextStyle(color: AppColors.textDim),
                 ),
               ),
               if (canAdd)
@@ -241,4 +272,49 @@ class _NameResult {
 
   final String name;
   final bool delete;
+}
+
+/// Segmente oben, darunter der Inhalt des gewählten Segments.
+class _EntryGroups extends StatefulWidget {
+  const _EntryGroups({required this.labels, required this.builder});
+
+  final List<String> labels;
+  final Widget Function(int index) builder;
+
+  @override
+  State<_EntryGroups> createState() => _EntryGroupsState();
+}
+
+class _EntryGroupsState extends State<_EntryGroups> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: SegmentedButton<int>(
+            showSelectedIcon: false,
+            segments: [
+              for (var i = 0; i < widget.labels.length; i++)
+                ButtonSegment(
+                  value: i,
+                  label: Text(
+                    widget.labels[i],
+                    key: ValueKey('entries-${widget.labels[i]}'),
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
+                ),
+            ],
+            selected: {_index},
+            onSelectionChanged: (s) => setState(() => _index = s.first),
+          ),
+        ),
+        widget.builder(_index),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 }

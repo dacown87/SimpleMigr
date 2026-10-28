@@ -37,7 +37,10 @@ Future<void> settle(WidgetTester tester) async {
 
 /// Scrollt zu einem Eintrag einer lazy aufgebauten Liste und macht ihn ganz sichtbar.
 Future<void> reveal(WidgetTester tester, Finder finder) async {
-  await tester.scrollUntilVisible(finder, 300, scrollable: find.byType(Scrollable).first);
+  // Die erste senkrechte Liste; Tabs (TabBarView) scrollen waagerecht.
+  final list = find.byWidgetPredicate(
+      (w) => w is Scrollable && axisDirectionToAxis(w.axisDirection) == Axis.vertical);
+  await tester.scrollUntilVisible(finder, 300, scrollable: list.first);
   await tester.ensureVisible(finder);
   await tester.pump();
 }
