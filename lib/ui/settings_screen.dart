@@ -47,44 +47,49 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  /// Eine Gruppe auf einmal, umschaltbar über Segmente statt einer langen Liste.
   Widget _entries(BuildContext context) {
     return StreamBuilder<List<Symptom>>(
       stream: repo.watchSymptoms(includeArchived: true),
       builder: (context, snap) {
         final all = snap.data;
         if (all == null) return const SizedBox.shrink();
-        return ListView(
-          children: [
+        return _EntryGroups(
+          labels: const ['Basis', 'Symptome', 'Aura', 'Auslöser'],
+          builder: (i) => switch (i) {
             // Fest eingebaute Einträge: nur umbenennen, nichts hinzufügen.
-            _section(
-              context,
-              'Grundeinträge',
-              SymptomGroup.general,
-              all.where(_isBasic).toList(),
-              canAdd: false,
-            ),
-            _section(
-              context,
-              'Symptome',
-              SymptomGroup.general,
-              all
-                  .where((s) => s.grp == SymptomGroup.general && !_isBasic(s))
-                  .toList(),
-            ),
-            _section(
-              context,
-              'Aura',
-              SymptomGroup.aura,
-              all.where((s) => s.grp == SymptomGroup.aura).toList(),
-            ),
-            _section(
-              context,
-              'Auslöser',
-              SymptomGroup.trigger,
-              all.where((s) => s.grp == SymptomGroup.trigger).toList(),
-            ),
-            const SizedBox(height: 24),
-          ],
+            0 => _section(
+                context,
+                'Grundeinträge',
+                'Fest eingebaut, lassen sich nur umbenennen.',
+                SymptomGroup.general,
+                all.where(_isBasic).toList(),
+                canAdd: false,
+              ),
+            1 => _section(
+                context,
+                'Symptome',
+                'Erscheinen im Block „Symptome“.',
+                SymptomGroup.general,
+                all
+                    .where((s) => s.grp == SymptomGroup.general && !_isBasic(s))
+                    .toList(),
+              ),
+            2 => _section(
+                context,
+                'Aura',
+                'Erscheinen, wenn Aura eingeschaltet ist.',
+                SymptomGroup.aura,
+                all.where((s) => s.grp == SymptomGroup.aura).toList(),
+              ),
+            _ => _section(
+                context,
+                'Auslöser',
+                'Mögliche Auslöser einer Attacke.',
+                SymptomGroup.trigger,
+                all.where((s) => s.grp == SymptomGroup.trigger).toList(),
+              ),
+          },
         );
       },
     );
@@ -103,6 +108,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _section(
     BuildContext context,
     String title,
+    String hint,
     SymptomGroup grp,
     List<Symptom> items, {
     bool canAdd = true,
@@ -116,8 +122,8 @@ class SettingsScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  hint,
+                  style: const TextStyle(color: AppColors.textDim),
                 ),
               ),
               if (canAdd)
@@ -266,4 +272,49 @@ class _NameResult {
 
   final String name;
   final bool delete;
+}
+
+/// Segmente oben, darunter der Inhalt des gewählten Segments.
+class _EntryGroups extends StatefulWidget {
+  const _EntryGroups({required this.labels, required this.builder});
+
+  final List<String> labels;
+  final Widget Function(int index) builder;
+
+  @override
+  State<_EntryGroups> createState() => _EntryGroupsState();
+}
+
+class _EntryGroupsState extends State<_EntryGroups> {
+  int _index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: SegmentedButton<int>(
+            showSelectedIcon: false,
+            segments: [
+              for (var i = 0; i < widget.labels.length; i++)
+                ButtonSegment(
+                  value: i,
+                  label: Text(
+                    widget.labels[i],
+                    key: ValueKey('entries-${widget.labels[i]}'),
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
+                ),
+            ],
+            selected: {_index},
+            onSelectionChanged: (s) => setState(() => _index = s.first),
+          ),
+        ),
+        widget.builder(_index),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 }

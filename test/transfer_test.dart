@@ -197,16 +197,40 @@ void main() {
     expect(saved, 'simplemigr_sicherung_2026-10-01.json');
   });
 
-  dbWidgetTest('Meine Migräne: Text wird gespeichert', (tester, env) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(),
-        home: DescriptionScreen(repo: env.repo),
-      ),
-    );
+  dbWidgetTest('Meine Migräne: Punkte hinzufügen, löschen, alter Text wird zu Punkten',
+      (tester, env) async {
+    await tester.runAsync(() => env.repo.setDescription('Flimmern vorher\n\nPochend, rechts'));
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: DescriptionScreen(repo: env.repo)));
     await settle(tester);
-    await tester.enterText(find.byKey(const ValueKey('description-field')), 'Pochend, rechts.');
+    expect(find.text('Flimmern vorher'), findsOneWidget);
+    expect(find.text('Pochend, rechts'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('new-point')), 'Dauer 2 Tage');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await settle(tester);
-    expect(await tester.runAsync(() => env.repo.getDescription()), 'Pochend, rechts.');
+    expect(find.text('Dauer 2 Tage'), findsOneWidget);
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('new-point'))).controller!.text, '');
+    expect(await tester.runAsync(() => env.repo.getDescription()),
+        'Flimmern vorher\nPochend, rechts\nDauer 2 Tage');
+
+    await tester.drag(find.text('Pochend, rechts'), const Offset(-600, 0));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Pochend, rechts'), findsNothing);
+    expect(await tester.runAsync(() => env.repo.getDescription()), 'Flimmern vorher\nDauer 2 Tage');
+    await tester.tap(find.text('Rückgängig'));
+    await settle(tester);
+    expect(find.text('Pochend, rechts'), findsOneWidget);
+
+    // Papierkorb am Punkt und „Löschen“ im Bearbeiten-Dialog
+    await tester.tap(find.byKey(const ValueKey('delete-point-0')));
+    await settle(tester);
+    expect(find.text('Flimmern vorher'), findsNothing);
+    await tester.tap(find.text('Dauer 2 Tage'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('delete-point-in-dialog')));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    expect(await tester.runAsync(() => env.repo.getDescription()), 'Pochend, rechts');
   });
 }

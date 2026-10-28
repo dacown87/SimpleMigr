@@ -24,7 +24,7 @@ Beim Start prüft die App auf GitHub, ob es eine neuere Version gibt, und zeigt 
 - Auslöser aus einer erweiterbaren Liste plus freie Notiz
 - Wetter wird mitgespeichert; der Ort lässt sich per Name oder Postleitzahl suchen (Standard Deutschland)
 - Tägliche Erinnerung
-- „Meine Migräne“: allgemeine Beschreibung der eigenen Migräne, steht im PDF auf der ersten Seite
+- „Meine Migräne“: die eigene Migräne in einzelnen Punkten beschreiben (hinzufügen, bearbeiten, verschieben, wischen zum Löschen); steht im PDF auf der ersten Seite
 - PDF-Export im Look der Papiertabelle
 - Sicherung (JSON, alles inklusive Wetter) und Tabelle (CSV) speichern; beides lässt sich wieder importieren, auch eigene Tabellen aus Excel/LibreOffice. Für importierte Migränetage wird das Wetter nachgeladen
 - Einstellungen in Tabs: Einträge, Allgemein, Daten. Alle Symptome und Auslöser sind dort anpassbar

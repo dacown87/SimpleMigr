@@ -68,13 +68,29 @@ void main() {
     });
     await tester.pumpWidget(app(env));
     await settle(tester);
-    expect(find.text('Med'), findsOneWidget);
+    // Medikamente mit „Hat geholfen“: nur das Kürzel, der Schalter versteht sich
+    expect(find.text('Med'), findsNothing);
     expect(find.text('Hat'), findsOneWidget);
     // Stress, Schlafmangel, Wetter, Alkohol → zwei Kürzel und „+2“
     expect(find.text('Str'), findsOneWidget);
     expect(find.text('Sch'), findsOneWidget);
     expect(find.text('+2'), findsOneWidget);
     expect(find.text('Wet'), findsNothing);
+  });
+
+  dbWidgetTest('Zugeklappt: nur der Schalter an → Haken', (tester, env) async {
+    await tester.runAsync(() async {
+      await env.repo.setValue(DateTime(2026, 9, 5), await env.idOf(SymptomKey.aura), 1);
+      await env.repo.setValue(DateTime(2026, 9, 6), await env.idOf(SymptomKey.medication), 1);
+    });
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    expect(find.byIcon(Icons.check), findsNWidgets(2));
+    expect(find.text('Aur'), findsNothing);
+    expect(find.text('Med'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('section-Aura')));
+    await settle(tester);
+    expect(find.byIcon(Icons.check), findsOneWidget); // Aura aufgeklappt
   });
 
   dbWidgetTest('Summenzeile: Migränetage und Attacken', (tester, env) async {

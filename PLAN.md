@@ -163,9 +163,10 @@ Monatszählung: Attacken, deren erster Tag im Monat liegt
 - [x] Tabellen-Import: Spalte „Datum“ (ISO oder deutsch), Symptome per Systemschlüssel-Alias oder Name, `Aura: …`/`Auslöser: …` als Gruppe, unbekannte Spalten werden neue Symptome, leere Spalten ignoriert, `/` bei Migräne = neue Attacke
 - [x] Import ersetzt für die Tage der Datei nur die enthaltenen Spalten; leere Notizen überschreiben nicht; andere Tage bleiben
 - [x] Nach dem Import holt der Wetter-Abgleich das Wetter für die importierten Migränetage (ohne Ort: Hinweis)
-- [x] „Meine Migräne“ (eigener Tab): allgemeine Beschreibung in `app_texts`, im PDF als erste Seite
+- [x] „Meine Migräne“ (eigener Tab): Liste einzelner Punkte wie in einer To-do-App, gespeichert zeilenweise in `app_texts`, im PDF als Aufzählung auf der ersten Seite
 - [x] Monatsraster: zugeklappte Abschnitte zeigen Kürzel der gewählten Einträge (ab vier: zwei Kürzel und „+n“)
-- [x] Einstellungen in Tabs: Einträge, Allgemein, Daten
+- [x] Einstellungen in Tabs: Einträge (unterteilt per Segment: Basis, Symptome, Aura, Auslöser), Allgemein, Daten
+- [x] Monatsraster: nur der Schalter (Aura, Medikamente) an, nichts gewählt → Haken
 
 ## TODO (nach v1)
 

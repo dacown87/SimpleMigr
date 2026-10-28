@@ -287,6 +287,19 @@ class Repository {
     }
   }
 
+  /// Die Beschreibung als einzelne Punkte, je Zeile einer.
+  Stream<List<String>> watchDescriptionPoints() => watchDescription().map(descriptionPoints);
+
+  Future<void> setDescriptionPoints(List<String> points) => setDescription([
+        for (final p in points)
+          if (p.trim().isNotEmpty) p.replaceAll('\n', ' ').trim(),
+      ].join('\n'));
+
+  static List<String> descriptionPoints(String text) => [
+        for (final l in text.split('\n'))
+          if (l.trim().isNotEmpty) l.trim(),
+      ];
+
   // ── Wetter ──────────────────────────────────────────────────
 
   /// Tage vor dem ersten und nach dem letzten Migränetag jeder Attacke, für die

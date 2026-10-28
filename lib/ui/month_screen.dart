@@ -134,10 +134,13 @@ List<Symptom> gridRows(List<Symptom> symptoms) => [
 
 /// Ausklappbarer Abschnitt des Rasters, analog zu den Blöcken im Tages-Editor.
 class _GridSection {
-  const _GridSection(this.title, this.symptoms);
+  const _GridSection(this.title, this.symptoms, {this.switchKey});
 
   final String title;
   final List<Symptom> symptoms;
+
+  /// Symptom, das im Editor der Schalter des Blocks ist (Aura, Medikamente).
+  final String? switchKey;
 }
 
 /// Hauptzeilen (immer sichtbar) und Abschnitte (aufklappbar) des Rasters.
@@ -154,11 +157,11 @@ class _GridSection {
       for (final s in rows)
         if (s.grp == SymptomGroup.general && (s.key == null || s.key == SymptomKey.nausea)) s,
     ]),
-    _GridSection('Aura', [
+    _GridSection('Aura', switchKey: SymptomKey.aura, [
       for (final s in rows)
         if (auraKeys.contains(s.key) || s.grp == SymptomGroup.aura) s,
     ]),
-    _GridSection('Medikamente', [
+    _GridSection('Medikamente', switchKey: SymptomKey.medication, [
       for (final s in rows)
         if (medKeys.contains(s.key)) s,
     ]),
@@ -220,7 +223,8 @@ class _MonthGridState extends State<MonthGrid> {
         );
 
     // Kopfzeile eines Abschnitts: Name mit Pfeil; zugeklappt stehen je Tag die
-    // Kürzel der gewählten Einträge darin.
+    // Kürzel der gewählten Einträge darin. Ist nur der Schalter des Blocks an
+    // (Aura, Medikamente), steht dort ein Haken.
     Widget header(String title, bool open, {required Key key, required VoidCallback onTap}) =>
         InkWell(
           key: key,
@@ -250,6 +254,8 @@ class _MonthGridState extends State<MonthGrid> {
       final chosen = open || g == null
           ? const <Symptom>[]
           : [for (final s in g.symptoms) if (data.day(d).value(s.id) != 0) s];
+      final switchKey = g?.switchKey;
+      final details = [for (final s in chosen) if (switchKey == null || s.key != switchKey) s];
       return Container(
         width: _cell,
         height: _cell,
@@ -258,7 +264,11 @@ class _MonthGridState extends State<MonthGrid> {
           color: AppColors.surface,
           border: Border(top: line),
         ),
-        child: chosen.isEmpty ? null : _CollapsedCell(symptoms: chosen, day: data.day(d)),
+        child: details.isNotEmpty
+            ? _CollapsedCell(symptoms: details, day: data.day(d))
+            : chosen.isNotEmpty
+                ? const Icon(Icons.check, size: 20, color: AppColors.text)
+                : null,
       );
     }
 
