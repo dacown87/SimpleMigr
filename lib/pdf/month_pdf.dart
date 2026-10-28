@@ -48,6 +48,7 @@ String latin1Safe(String text) => text
     .replaceAll(RegExp('[–—−]'), '-')
     .replaceAll('…', '...')
     .replaceAll('•', '·')
+    .replaceAll(RegExp('[→⇒]'), '->')
     .replaceAll(RegExp(r'[^\u0000-\u00FF]'), '');
 
 pw.Widget _monthPage(MonthData m) {

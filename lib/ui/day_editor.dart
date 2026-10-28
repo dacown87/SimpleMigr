@@ -75,6 +75,7 @@ class _DayEditorState extends State<DayEditor> {
             s.grp == SymptomGroup.general && (s.key == null || s.key == SymptomKey.nausea))
         .toList();
     final triggers = list.where((s) => s.grp == SymptomGroup.trigger).toList();
+    final substances = list.where((s) => s.grp == SymptomGroup.medication).toList();
 
     final migraineOn = day.value(migraine.id) != 0;
     final auraOn = day.value(aura.id) != 0;
@@ -157,16 +158,26 @@ class _DayEditorState extends State<DayEditor> {
         _Section(
           title: 'Medikamente',
           switchValue: medicationOn,
-          // Ausschalten nimmt auch „Hat geholfen“ zurück.
+          // Ausschalten nimmt auch „Hat geholfen“ und die Substanzen zurück.
           onSwitch: (v) => guarded(context, () async {
             await repo.setValue(date, medication.id, v ? 1 : 0);
-            if (!v) await repo.setValue(date, medHelped.id, 0);
+            if (!v) {
+              for (final s in [medHelped, ...substances]) {
+                if (day.value(s.id) != 0) await repo.setValue(date, s.id, 0);
+              }
+            }
           }),
           children: [
             _ChipWrap(
-              symptoms: [medHelped],
+              symptoms: [...substances, medHelped],
               day: day,
-              onToggle: (s, on) => setFlag(s, on),
+              // Eine Substanz wählen heißt: Medikamente genommen.
+              onToggle: (s, on) => guarded(context, () async {
+                await repo.setValue(date, s.id, on ? 1 : 0);
+                if (on && s.grp == SymptomGroup.medication) {
+                  await repo.setValue(date, medication.id, 1);
+                }
+              }),
             ),
           ],
         ),
