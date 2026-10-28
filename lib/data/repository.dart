@@ -261,6 +261,32 @@ class Repository {
     );
   }
 
+  // ── Beschreibung ────────────────────────────────────────────
+
+  static const _descriptionKey = 'description';
+
+  /// Allgemeine Beschreibung der eigenen Migräne (für Arzt und PDF).
+  Stream<String> watchDescription() =>
+      (db.select(db.appTexts)..where((t) => t.key.equals(_descriptionKey)))
+          .watchSingleOrNull()
+          .map((r) => r?.value ?? '');
+
+  Future<String> getDescription() async =>
+      (await (db.select(db.appTexts)..where((t) => t.key.equals(_descriptionKey)))
+              .getSingleOrNull())
+          ?.value ??
+      '';
+
+  Future<void> setDescription(String text) async {
+    if (text.trim().isEmpty) {
+      await (db.delete(db.appTexts)..where((t) => t.key.equals(_descriptionKey))).go();
+    } else {
+      await db
+          .into(db.appTexts)
+          .insertOnConflictUpdate(AppTextsCompanion.insert(key: _descriptionKey, value: text));
+    }
+  }
+
   // ── Wetter ──────────────────────────────────────────────────
 
   /// Tage vor dem ersten und nach dem letzten Migränetag jeder Attacke, für die

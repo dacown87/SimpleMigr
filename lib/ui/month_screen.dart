@@ -219,8 +219,8 @@ class _MonthGridState extends State<MonthGrid> {
               style: TextStyle(fontSize: 15, color: dim ? AppColors.textDim : AppColors.text)),
         );
 
-    // Kopfzeile eines Abschnitts: Name mit Pfeil; zugeklappt zeigt ein Punkt je Tag,
-    // dass darin etwas eingetragen ist.
+    // Kopfzeile eines Abschnitts: Name mit Pfeil; zugeklappt stehen je Tag die
+    // Kürzel der gewählten Einträge darin.
     Widget header(String title, bool open, {required Key key, required VoidCallback onTap}) =>
         InkWell(
           key: key,
@@ -247,7 +247,9 @@ class _MonthGridState extends State<MonthGrid> {
         );
 
     Widget headerDayCell(_GridSection? g, bool open, DateTime d) {
-      final marked = !open && g != null && g.symptoms.any((s) => data.day(d).value(s.id) != 0);
+      final chosen = open || g == null
+          ? const <Symptom>[]
+          : [for (final s in g.symptoms) if (data.day(d).value(s.id) != 0) s];
       return Container(
         width: _cell,
         height: _cell,
@@ -256,9 +258,7 @@ class _MonthGridState extends State<MonthGrid> {
           color: AppColors.surface,
           border: Border(top: line),
         ),
-        child: marked
-            ? const Icon(Icons.circle, size: 10, color: AppColors.accent)
-            : null,
+        child: chosen.isEmpty ? null : _CollapsedCell(symptoms: chosen, day: data.day(d)),
       );
     }
 
@@ -391,6 +391,45 @@ class _GridCell extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: v != 0 && color != null ? AppColors.onMigraine : AppColors.text,
           )),
+    );
+  }
+}
+
+/// Zugeklappter Abschnitt: Kürzel der gewählten Einträge untereinander, bei mehr als
+/// drei die ersten zwei und „+n“.
+class _CollapsedCell extends StatelessWidget {
+  const _CollapsedCell({required this.symptoms, required this.day});
+
+  final List<Symptom> symptoms;
+  final DayData day;
+
+  static String abbreviation(Symptom s, int value) {
+    final name = s.name.trim();
+    final short = name.length <= 4 ? name : name.substring(0, 3);
+    return s.kind == SymptomKind.scale0to3 ? '$short $value' : short;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = [
+      for (final s in symptoms.length > 3 ? symptoms.take(2) : symptoms)
+        abbreviation(s, day.value(s.id)),
+      if (symptoms.length > 3) '+${symptoms.length - 2}',
+    ];
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final l in lines)
+          Text(l,
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              style: const TextStyle(
+                fontSize: 10,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                color: AppColors.text,
+              )),
+      ],
     );
   }
 }

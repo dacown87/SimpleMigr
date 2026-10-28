@@ -63,13 +63,22 @@ class DayWeather extends Table {
   Set<Column> get primaryKey => {date};
 }
 
-@DriftDatabase(tables: [Symptoms, DayValues, DayMeta, DayWeather])
+/// Freie Texte, die nicht an einem Tag hängen (z. B. die Beschreibung der eigenen Migräne).
+class AppTexts extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+@DriftDatabase(tables: [Symptoms, DayValues, DayMeta, DayWeather, AppTexts])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? driftDatabase(name: 'simplemigr'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -96,6 +105,7 @@ class AppDatabase extends _$AppDatabase {
               ));
             }
           }
+          if (from < 4) await m.createTable(appTexts);
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');

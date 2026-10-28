@@ -14,8 +14,25 @@ const _red = PdfColor.fromInt(0xFFD66B6B);
 const _line = PdfColors.grey500;
 
 /// Ein Dokument, A4 quer, eine Seite pro Monat, aufgebaut wie die Papiertabelle.
-Future<Uint8List> buildMonthsPdf(List<MonthData> months) async {
+/// Eine [description] der eigenen Migräne steht davor auf eigener Seite.
+Future<Uint8List> buildMonthsPdf(List<MonthData> months, {String description = ''}) async {
   final doc = pw.Document(title: 'SimpleMigr', author: 'SimpleMigr');
+  if (description.trim().isNotEmpty) {
+    doc.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.landscape,
+      margin: const pw.EdgeInsets.all(24),
+      build: (_) => [
+        pw.Text('Meine Migräne',
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 12),
+        for (final para in description.trim().split('\n'))
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            child: pw.Text(latin1Safe(para), style: const pw.TextStyle(fontSize: 12)),
+          ),
+      ],
+    ));
+  }
   for (final m in months) {
     doc.addPage(pw.Page(
       pageFormat: PdfPageFormat.a4.landscape,
@@ -25,6 +42,16 @@ Future<Uint8List> buildMonthsPdf(List<MonthData> months) async {
   }
   return doc.save();
 }
+
+/// Die eingebaute PDF-Schrift kennt nur Latin-1. Typografische Zeichen, die
+/// Handy-Tastaturen gern einsetzen, werden durch einfache ersetzt.
+String latin1Safe(String text) => text
+    .replaceAll(RegExp('[„“”‟]'), '"')
+    .replaceAll(RegExp('[‚‘’‛]'), "'")
+    .replaceAll(RegExp('[–—−]'), '-')
+    .replaceAll('…', '...')
+    .replaceAll('•', '·')
+    .replaceAll(RegExp(r'[^\u0000-\u00FF]'), '');
 
 pw.Widget _monthPage(MonthData m) {
   final days = monthDays(m.year, m.month);

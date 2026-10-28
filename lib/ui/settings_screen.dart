@@ -9,59 +9,84 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
     super.key,
     required this.repo,
-    this.extraTiles = const [],
+    this.generalTiles = const [],
+    this.dataTiles = const [],
   });
 
   final Repository repo;
 
-  /// Zusätzliche Einträge oben (Erinnerung, Export).
-  final List<Widget> extraTiles;
+  /// Tab „Allgemein“ (Erinnerung, Wetter-Ort).
+  final List<Widget> generalTiles;
+
+  /// Tab „Daten“ (PDF-Export, Sicherung, Import).
+  final List<Widget> dataTiles;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
-      body: StreamBuilder<List<Symptom>>(
-        stream: repo.watchSymptoms(includeArchived: true),
-        builder: (context, snap) {
-          final all = snap.data;
-          if (all == null) return const SizedBox.shrink();
-          return ListView(
-            children: [
-              ...extraTiles,
-              // Fest eingebaute Einträge: nur umbenennen, nichts hinzufügen.
-              _section(
-                context,
-                'Grundeinträge',
-                SymptomGroup.general,
-                all.where(_isBasic).toList(),
-                canAdd: false,
-              ),
-              _section(
-                context,
-                'Symptome',
-                SymptomGroup.general,
-                all
-                    .where((s) => s.grp == SymptomGroup.general && !_isBasic(s))
-                    .toList(),
-              ),
-              _section(
-                context,
-                'Aura',
-                SymptomGroup.aura,
-                all.where((s) => s.grp == SymptomGroup.aura).toList(),
-              ),
-              _section(
-                context,
-                'Auslöser',
-                SymptomGroup.trigger,
-                all.where((s) => s.grp == SymptomGroup.trigger).toList(),
-              ),
-              const SizedBox(height: 24),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Einstellungen'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Einträge'),
+              Tab(text: 'Allgemein'),
+              Tab(text: 'Daten'),
             ],
-          );
-        },
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _entries(context),
+            ListView(children: generalTiles),
+            ListView(children: dataTiles),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _entries(BuildContext context) {
+    return StreamBuilder<List<Symptom>>(
+      stream: repo.watchSymptoms(includeArchived: true),
+      builder: (context, snap) {
+        final all = snap.data;
+        if (all == null) return const SizedBox.shrink();
+        return ListView(
+          children: [
+            // Fest eingebaute Einträge: nur umbenennen, nichts hinzufügen.
+            _section(
+              context,
+              'Grundeinträge',
+              SymptomGroup.general,
+              all.where(_isBasic).toList(),
+              canAdd: false,
+            ),
+            _section(
+              context,
+              'Symptome',
+              SymptomGroup.general,
+              all
+                  .where((s) => s.grp == SymptomGroup.general && !_isBasic(s))
+                  .toList(),
+            ),
+            _section(
+              context,
+              'Aura',
+              SymptomGroup.aura,
+              all.where((s) => s.grp == SymptomGroup.aura).toList(),
+            ),
+            _section(
+              context,
+              'Auslöser',
+              SymptomGroup.trigger,
+              all.where((s) => s.grp == SymptomGroup.trigger).toList(),
+            ),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
     );
   }
 

@@ -36,21 +36,45 @@ void main() {
 
     expect(find.text('3'), findsWidgets); // Schmerz 3 (und Tageszahl 3)
     expect(find.text('/'), findsOneWidget);
-    // Erweiterte Zeilen sind zugeklappt, nur ein Punkt zeigt den Eintrag.
+    // Erweiterte Zeilen sind zugeklappt, ein Kürzel zeigt den Eintrag.
     expect(find.text('Übelkeit'), findsNothing);
     expect(find.text('X'), findsNothing);
-    expect(find.byIcon(Icons.circle), findsOneWidget);
+    expect(find.text('Übe'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('section-Symptome')));
     await settle(tester);
     expect(find.text('Übelkeit'), findsOneWidget);
     expect(find.text('X'), findsOneWidget); // Übelkeit am 2.
-    expect(find.byIcon(Icons.circle), findsNothing);
+    expect(find.text('Übe'), findsNothing);
 
     Iterable<Color?> fills() => tester
         .widgetList<Container>(find.byType(Container))
         .map((c) => (c.decoration as BoxDecoration?)?.color);
     expect(fills().where((c) => c == AppColors.migraine), hasLength(5));
     expect(fills().where((c) => c == AppColors.period), hasLength(1));
+  });
+
+  dbWidgetTest('Zugeklappt: Kürzel der gewählten Einträge, ab vier „+n“', (tester, env) async {
+    await tester.runAsync(() async {
+      final med = await env.idOf(SymptomKey.medication);
+      final helped = await env.idOf(SymptomKey.medHelped);
+      await env.repo.setValue(DateTime(2026, 9, 5), med, 1);
+      await env.repo.setValue(DateTime(2026, 9, 5), helped, 1);
+      final triggers = (await env.db.select(env.db.symptoms).get())
+          .where((s) => s.grp == SymptomGroup.trigger)
+          .take(4);
+      for (final t in triggers) {
+        await env.repo.setValue(DateTime(2026, 9, 6), t.id, 1);
+      }
+    });
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    expect(find.text('Med'), findsOneWidget);
+    expect(find.text('Hat'), findsOneWidget);
+    // Stress, Schlafmangel, Wetter, Alkohol → zwei Kürzel und „+2“
+    expect(find.text('Str'), findsOneWidget);
+    expect(find.text('Sch'), findsOneWidget);
+    expect(find.text('+2'), findsOneWidget);
+    expect(find.text('Wet'), findsNothing);
   });
 
   dbWidgetTest('Summenzeile: Migränetage und Attacken', (tester, env) async {

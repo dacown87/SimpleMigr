@@ -41,6 +41,8 @@ symptoms        id, name, kind (flag | scale0to3), grp (general | aura | trigger
 
 day_values      date, symptom_id, value            PK(date, symptom_id)
 day_meta        date PK, new_attack (bool), note (text)
+day_weather     date PK, Tageswetter (Luftdruck, Temperatur, …)
+app_texts       key PK, value   (z. B. description = „Meine Migräne“)
 ```
 
 - Auslöser sind Symptome der Gruppe `trigger` (Typ `flag`). Dadurch gibt es nur
@@ -154,15 +156,23 @@ Monatszählung: Attacken, deren erster Tag im Monat liegt
 - [x] Abgleich beim Start, beim Zurückkehren in die App, nach Änderungen und bei Ortswechsel; offline = still, später erneut
 - [x] Anzeige: Wetterkarte im Tageseditor, Zeilen „Luftdruck“ und „Druck ±“ im Monatsraster (Änderung ≥ 5 hPa rosa) und im PDF
 
+## Phase: Daten, Beschreibung, Einstellungen (1.0.6)
+
+- [x] Sicherung als JSON (alles inklusive Wetter und Beschreibung) und Tabelle als CSV (`;`, UTF-8 mit BOM) speichern
+- [x] Import erkennt Sicherung oder Tabelle am Inhalt; Vorschau vor dem Übernehmen, alles in einer Transaktion
+- [x] Tabellen-Import: Spalte „Datum“ (ISO oder deutsch), Symptome per Systemschlüssel-Alias oder Name, `Aura: …`/`Auslöser: …` als Gruppe, unbekannte Spalten werden neue Symptome, leere Spalten ignoriert, `/` bei Migräne = neue Attacke
+- [x] Import ersetzt für die Tage der Datei nur die enthaltenen Spalten; leere Notizen überschreiben nicht; andere Tage bleiben
+- [x] Nach dem Import holt der Wetter-Abgleich das Wetter für die importierten Migränetage (ohne Ort: Hinweis)
+- [x] „Meine Migräne“ (eigener Tab): allgemeine Beschreibung in `app_texts`, im PDF als erste Seite
+- [x] Monatsraster: zugeklappte Abschnitte zeigen Kürzel der gewählten Einträge (ab vier: zwei Kürzel und „+n“)
+- [x] Einstellungen in Tabs: Einträge, Allgemein, Daten
+
 ## TODO (nach v1)
 
 - Home-Screen-Widget (`home_widget`): Status anzeigen, „Eintragen“ öffnet „Heute“;
   direktes Speichern ohne App-Start erst danach (braucht Hintergrund-Isolate, der parallel zur App in die DB schreibt)
 - Farben und Reihenfolge eigener Symptome einstellbar
 - Statistik (Migränetage, Attacken, Schmerz-Durchschnitt, Zusammenhang mit der Periode)
-- CSV-Export
-- Backup/Restore als Datei
-- Medikamente erfassen
 - Aura-Symptome mit Details (z. B. Dauer)
 
 ## Entwicklung

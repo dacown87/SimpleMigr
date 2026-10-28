@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/repository.dart';
 import 'update/updater.dart';
+import 'ui/description_screen.dart';
 import 'ui/month_screen.dart';
 import 'ui/settings_screen.dart';
 import 'ui/theme.dart';
@@ -12,7 +13,8 @@ class SimpleMigrApp extends StatelessWidget {
   const SimpleMigrApp({
     super.key,
     required this.repo,
-    this.settingsTiles = const [],
+    this.generalTiles = const [],
+    this.dataTiles = const [],
     this.clock = DateTime.now,
     this.navigatorKey,
     this.shellKey,
@@ -20,7 +22,8 @@ class SimpleMigrApp extends StatelessWidget {
   });
 
   final Repository repo;
-  final List<Widget> settingsTiles;
+  final List<Widget> generalTiles;
+  final List<Widget> dataTiles;
   final DateTime Function() clock;
   final GlobalKey<NavigatorState>? navigatorKey;
   final GlobalKey<HomeShellState>? shellKey;
@@ -41,7 +44,8 @@ class SimpleMigrApp extends StatelessWidget {
       home: HomeShell(
         key: shellKey,
         repo: repo,
-        settingsTiles: settingsTiles,
+        generalTiles: generalTiles,
+        dataTiles: dataTiles,
         clock: clock,
         updater: updater,
       ),
@@ -53,13 +57,15 @@ class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
     required this.repo,
-    required this.settingsTiles,
+    required this.generalTiles,
+    required this.dataTiles,
     required this.clock,
     this.updater,
   });
 
   final Repository repo;
-  final List<Widget> settingsTiles;
+  final List<Widget> generalTiles;
+  final List<Widget> dataTiles;
   final DateTime Function() clock;
   final Updater? updater;
 
@@ -121,7 +127,12 @@ class HomeShellState extends State<HomeShell> {
         children: [
           TodayScreen(repo: widget.repo, clock: widget.clock),
           MonthScreen(repo: widget.repo, clock: widget.clock),
-          SettingsScreen(repo: widget.repo, extraTiles: widget.settingsTiles),
+          DescriptionScreen(repo: widget.repo),
+          SettingsScreen(
+            repo: widget.repo,
+            generalTiles: widget.generalTiles,
+            dataTiles: widget.dataTiles,
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -130,6 +141,7 @@ class HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.edit_note), label: 'Heute'),
           NavigationDestination(icon: Icon(Icons.calendar_month), label: 'Monat'),
+          NavigationDestination(icon: Icon(Icons.psychology_outlined), label: 'Meine Migräne'),
           NavigationDestination(icon: Icon(Icons.settings), label: 'Einstellungen'),
         ],
       ),
