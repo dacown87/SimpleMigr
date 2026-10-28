@@ -5,7 +5,11 @@ part 'database.g.dart';
 
 enum SymptomKind { flag, scale0to3 }
 
-enum SymptomGroup { general, aura, trigger }
+/// Neue Gruppen nur hinten anhängen: die Datenbank speichert den Index.
+enum SymptomGroup { general, aura, trigger, medication }
+
+/// Triptane erkennt die App am Namen (Sumatriptan, Rizatriptan, …).
+bool isTriptan(String name) => name.toLowerCase().contains('triptan');
 
 /// Feste Systemschlüssel. Logik und Farben hängen daran, nie am Namen.
 class SymptomKey {

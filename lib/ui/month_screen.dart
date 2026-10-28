@@ -147,7 +147,6 @@ class _GridSection {
 (List<Symptom>, List<_GridSection>) _gridLayout(List<Symptom> all) {
   const mainKeys = [SymptomKey.migraine, SymptomKey.pain, SymptomKey.period];
   const auraKeys = [SymptomKey.aura];
-  const medKeys = [SymptomKey.medication, SymptomKey.medHelped];
   final rows = gridRows(all);
   final main = [
     for (final k in mainKeys) ...rows.where((s) => s.key == k),
@@ -163,7 +162,11 @@ class _GridSection {
     ]),
     _GridSection('Medikamente', switchKey: SymptomKey.medication, [
       for (final s in rows)
-        if (medKeys.contains(s.key)) s,
+        if (s.key == SymptomKey.medication) s,
+      for (final s in rows)
+        if (s.grp == SymptomGroup.medication) s,
+      for (final s in rows)
+        if (s.key == SymptomKey.medHelped) s,
     ]),
     _GridSection('Auslöser', [
       for (final s in rows)

@@ -167,13 +167,52 @@ Monatszählung: Attacken, deren erster Tag im Monat liegt
 - [x] Monatsraster: zugeklappte Abschnitte zeigen Kürzel der gewählten Einträge (ab vier: zwei Kürzel und „+n“)
 - [x] Einstellungen in Tabs: Einträge (unterteilt per Segment: Basis, Symptome, Aura, Auslöser), Allgemein, Daten
 - [x] Monatsraster: nur der Schalter (Aura, Medikamente) an, nichts gewählt → Haken
+- [x] Medikamente mit Substanzen: eigene Gruppe `SymptomGroup.medication` (Einstellungen → Einträge → „Medis“), im Editor als Chips im Block „Medikamente“; eine Substanz wählen setzt „Medikamente genommen“. Triptan = Name enthält „triptan“. CSV-Spalte „Medikament: …“
+- [x] Arzt-Zusammenfassung (Einstellungen → Daten), Zeitraum vorausgewählt: letzte 6 Monate bis heute. Rechenregeln in `lib/data/report.dart`:
+  Migränetag = Migräne an; Attacke wie im Raster (Lücke oder `/`), gezählt im Monat ihres Starts; Aura-Tag = Aura an oder ein Aura-Symptom;
+  Periodenbeginn = erster Periodentag nach 5 periodenfreien Tagen, Zykluslängen über 60 Tage gelten als Erfassungslücke;
+  perimenstruell = Start Tag −2 bis +3 um einen Periodenbeginn, sonst Zyklustag; Muster = 4-Tage-Fenster mit ≥ 2 und ≥ der Hälfte der übrigen Attacken;
+  Hinweis bei Triptan ≥ 10 bzw. sonstigen Mitteln ≥ 15 Einnahmetagen im Monat;
+  Beschreibung per Stichwort gruppiert (Motorik/Sprache fett, Skalen-Zeilen unter die Tabelle); Fragen nur, wenn die Daten sie begründen (max. 6)
+  Zeitraum beginnt frühestens mit dem ersten Tagebucheintrag (davor „nicht erfasst“, nicht 0).
+  Balkendiagramm (Migränetage, Aura-Tage, Tage Schmerz stark je Monat) neben der Tabelle; passt das nicht auf eine Seite, auf eigener letzter Seite; bei nur einem Monat keins
+
+## Phase: In-App-Update reparieren (1.0.7, offen)
+
+Update 1.0.5 → 1.0.6: neue Version erkannt, APK geladen, Installation scheiterte.
+Bereits geprüft und in Ordnung: beide Release-APKs mit demselben Schlüssel signiert
+(SHA-256 `3aea8f63…`, auch lokal `~/.simplemigr/release.jks`), versionCode 6 → 7,
+1.0.5 hat `REQUEST_INSTALL_PACKAGES` und den FileProvider von open_filex, APK liegt im Cache (freigegeben).
+Ursache noch unklar, weil `installUpdate` den Fehler verschluckt („Update fehlgeschlagen“).
+
+**1. Ursache klären (mit Handy)**
+- [ ] Was wurde angezeigt: SnackBar „Update fehlgeschlagen“, Installer mit Fehler (welcher?) oder nichts?
+- [ ] Wie kam 1.0.5 aufs Handy: GitHub-APK oder `flutter run`/`flutter install`? Debug-Schlüssel (`fdc14b11…`) ≠ Release-Schlüssel → „Paket steht in Konflikt“
+- [ ] Per adb: Signatur der installierten App (`adb shell pm path …` + `adb pull` + `apksigner verify --print-certs`), Installationsversuch mit `adb logcat` mitlesen
+- [ ] Prüfen: „Unbekannte Apps installieren“ für SimpleMigr erlaubt? Play Protect-Meldung?
+- [ ] Bei Signaturkonflikt: einmalig manuell umsteigen (Sicherung exportieren, deinstallieren, GitHub-APK installieren, Sicherung importieren); kein Code-Fix möglich
+
+**2. Code (`lib/update/updater.dart`, `lib/ui/version_tile.dart`, `MainActivity.kt`)**
+- [ ] Fehlergrund anzeigen: `installUpdate` zeigt die Meldung (HTTP-Status, „Download unvollständig“, open_filex-Ergebnis) statt nur „Update fehlgeschlagen“
+- [ ] Vor dem Öffnen des Installers `canRequestPackageInstalls()` prüfen (kleiner MethodChannel in `MainActivity`); falls nein: Dialog mit Erklärung, dann `ACTION_MANAGE_UNKNOWN_APP_SOURCES` öffnen und danach den Installer erneut starten
+- [ ] Download gegen die Größe aus der Release-Abfrage (`assets[].size`) prüfen, nicht nur gegen `contentLength` (fehlt bei manchen Antworten)
+- [ ] Fortschritt beim Laden (~67 MB) in der SnackBar (Prozent), damit kein Eindruck „hängt“ entsteht
+- [ ] Alte `SimpleMigr-*.apk` im Cache vor dem Download löschen
+
+**3. Tests**
+- [ ] `test/updater_test.dart`: `parseRelease` übernimmt `size`; abgebrochener Download → Fehler mit Grund
+- [ ] Widget-Test: fehlgeschlagene Installation zeigt den Grund in der SnackBar
+
+**4. Prüfen vor dem Release**
+- [ ] Emulator: GitHub-APK 1.0.6 installieren, Release 1.0.7 veröffentlichen, Update aus der App durchspielen (mit und ohne Erlaubnis für unbekannte Apps)
+- [ ] Hinweis: Die Verbesserungen greifen erst ab dem Update *von* 1.0.7; 1.0.6 → 1.0.7 läuft noch mit dem alten Code
 
 ## TODO (nach v1)
 
 - Home-Screen-Widget (`home_widget`): Status anzeigen, „Eintragen“ öffnet „Heute“;
   direktes Speichern ohne App-Start erst danach (braucht Hintergrund-Isolate, der parallel zur App in die DB schreibt)
 - Farben und Reihenfolge eigener Symptome einstellbar
-- Statistik (Migränetage, Attacken, Schmerz-Durchschnitt, Zusammenhang mit der Periode)
+- Statistik in der App (die Arzt-Zusammenfassung deckt das als PDF ab)
 - Aura-Symptome mit Details (z. B. Dauer)
 
 ## Entwicklung

@@ -6,18 +6,18 @@ Kurzer Überblick für alle, die am Code arbeiten. Fachliche Regeln und Entwurf 
 
 | Ordner | Inhalt |
 |---|---|
-| `lib/data/` | Drift-Datenbank (`database.dart`), Zugriff und Monatsdaten (`repository.dart`), Attackenzählung (`attacks.dart`) |
+| `lib/data/` | Drift-Datenbank (`database.dart`), Zugriff und Monatsdaten (`repository.dart`), Attackenzählung (`attacks.dart`), Auswertung für die Arzt-Zusammenfassung (`report.dart`) |
 | `lib/ui/` | Tages-Editor (`day_editor.dart`), Monatsraster (`month_screen.dart`), Einstellungen, Theme |
 | `lib/weather/` | Wetterabruf (Open-Meteo, Orte auch per PLZ über zippopotam.us) |
 | `lib/update/` | Update-Prüfung beim Start (`updater.dart`) |
-| `lib/pdf/` | PDF-Export im Look der Papiertabelle |
+| `lib/pdf/` | PDF-Export im Look der Papiertabelle, Arzt-Zusammenfassung (`report_pdf.dart`) |
 | `test/` | Unit- und Widget-Tests, dazu ein Test mit den echten Daten Aug/Sep 2026 |
 
 Der Tages-Editor und das Monatsraster haben denselben Aufbau: Migräne, Schmerzen und Periode sind immer sichtbar, Symptome, Aura, Medikamente, Auslöser (und im Raster das Wetter) sind aufklappbar.
 
 ## Datenbank
 
-Systemsymptome haben einen festen Schlüssel (`SymptomKey`), Logik und Farben hängen daran, nie am Namen. Änderungen am Schema brauchen eine neue `schemaVersion` und einen Schritt in `onUpgrade`.
+Systemsymptome haben einen festen Schlüssel (`SymptomKey`), Logik und Farben hängen daran, nie am Namen. `SymptomGroup` wird als Index gespeichert: neue Gruppen nur hinten anhängen. Änderungen am Schema brauchen eine neue `schemaVersion` und einen Schritt in `onUpgrade`.
 
 | Version | Änderung |
 |---|---|

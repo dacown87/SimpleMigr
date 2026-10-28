@@ -55,7 +55,7 @@ class SettingsScreen extends StatelessWidget {
         final all = snap.data;
         if (all == null) return const SizedBox.shrink();
         return _EntryGroups(
-          labels: const ['Basis', 'Symptome', 'Aura', 'Auslöser'],
+          labels: const ['Basis', 'Symptome', 'Aura', 'Auslöser', 'Medis'],
           builder: (i) => switch (i) {
             // Fest eingebaute Einträge: nur umbenennen, nichts hinzufügen.
             0 => _section(
@@ -82,12 +82,20 @@ class SettingsScreen extends StatelessWidget {
                 SymptomGroup.aura,
                 all.where((s) => s.grp == SymptomGroup.aura).toList(),
               ),
-            _ => _section(
+            3 => _section(
                 context,
                 'Auslöser',
                 'Mögliche Auslöser einer Attacke.',
                 SymptomGroup.trigger,
                 all.where((s) => s.grp == SymptomGroup.trigger).toList(),
+              ),
+            _ => _section(
+                context,
+                'Medikamente',
+                'Erscheinen im Block „Medikamente“. Namen mit „triptan“ '
+                    'zählen in der Arzt-Zusammenfassung als Triptan.',
+                SymptomGroup.medication,
+                all.where((s) => s.grp == SymptomGroup.medication).toList(),
               ),
           },
         );

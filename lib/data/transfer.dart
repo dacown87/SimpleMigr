@@ -90,6 +90,7 @@ class DataTransfer {
   static const backupFormat = 'simplemigr-backup';
   static const _auraPrefix = 'Aura: ';
   static const _triggerPrefix = 'Auslöser: ';
+  static const _medPrefix = 'Medikament: ';
 
   // ── Export ──────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ class DataTransfer {
   static String _columnName(Symptom s) => switch (s.grp) {
     SymptomGroup.aura => '$_auraPrefix${s.name}',
     SymptomGroup.trigger => '$_triggerPrefix${s.name}',
+    SymptomGroup.medication => '$_medPrefix${s.name}',
     SymptomGroup.general => s.name,
   };
 
@@ -334,6 +336,9 @@ class DataTransfer {
     }
     if (h.startsWith(_triggerPrefix.trim())) {
       return ImportSymptom(h.substring(_triggerPrefix.trim().length).trim(), SymptomGroup.trigger);
+    }
+    if (h.startsWith(_medPrefix.trim()) && h.length > _medPrefix.trim().length) {
+      return ImportSymptom(h.substring(_medPrefix.trim().length).trim(), SymptomGroup.medication);
     }
     final key = _aliases[h.toLowerCase()];
     return ImportSymptom(

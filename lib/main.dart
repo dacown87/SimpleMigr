@@ -8,6 +8,7 @@ import 'reminder.dart';
 import 'ui/data_tiles.dart';
 import 'ui/export_tile.dart';
 import 'ui/reminder_tile.dart';
+import 'ui/report_tile.dart';
 import 'ui/version_tile.dart';
 import 'ui/weather_tile.dart';
 import 'update/updater.dart';
@@ -39,6 +40,7 @@ Future<void> main() async {
       VersionTile(updater: updater),
     ],
     dataTiles: [
+      ReportTile(repo: repo),
       ExportTile(repo: repo),
       DataTiles(
         transfer: DataTransfer(repo),
