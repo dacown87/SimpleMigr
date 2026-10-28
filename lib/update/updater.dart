@@ -1,16 +1,29 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 class UpdateInfo {
-  const UpdateInfo({required this.version, required this.apkUrl});
+  const UpdateInfo({required this.version, required this.apkUrl, this.size = 0});
 
   /// Versionsnummer ohne „v“, z. B. `1.0.5`.
   final String version;
   final String apkUrl;
+
+  /// Größe der APK in Bytes laut Release, 0 = unbekannt.
+  final int size;
+}
+
+/// Fehler beim Update mit einem Text, den die App so anzeigen kann.
+class UpdateException implements Exception {
+  const UpdateException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 /// Sucht nach einer neueren Version und installiert sie.
@@ -18,8 +31,14 @@ abstract class Updater {
   /// `null`, wenn die App aktuell ist oder die Prüfung nicht möglich war (z. B. offline).
   Future<UpdateInfo?> check();
 
-  /// Lädt die APK und öffnet den Android-Installer.
-  Future<void> install(UpdateInfo info);
+  /// Darf die App Apps installieren („Unbekannte Apps installieren“)?
+  Future<bool> canInstall();
+
+  /// Öffnet die Android-Einstellung dafür; liefert nach der Rückkehr, ob es jetzt erlaubt ist.
+  Future<bool> requestInstallPermission();
+
+  /// Lädt die APK und öffnet den Android-Installer. [onProgress] bekommt 0–1.
+  Future<void> install(UpdateInfo info, {void Function(double progress)? onProgress});
 }
 
 /// Ist [tag] (`v1.0.5` oder `1.0.5`) neuer als [current] (`1.0.4`)? Ungültige Tags: nein.
@@ -49,6 +68,9 @@ class GithubUpdater implements Updater {
   final String repo;
   final HttpClient _client;
 
+  /// Gegenstück in `MainActivity.kt`.
+  static const _channel = MethodChannel('simplemigr/install');
+
   @override
   Future<UpdateInfo?> check() async {
     try {
@@ -73,31 +95,65 @@ class GithubUpdater implements Updater {
     for (final a in (json['assets'] as List? ?? const []).cast<Map<String, dynamic>>()) {
       final url = a['browser_download_url'];
       if (url is String && (a['name'] as String? ?? '').endsWith('.apk')) {
-        return UpdateInfo(version: tag.replaceFirst(RegExp('^[vV]'), ''), apkUrl: url);
+        final size = a['size'];
+        return UpdateInfo(
+          version: tag.replaceFirst(RegExp('^[vV]'), ''),
+          apkUrl: url,
+          size: size is int ? size : 0,
+        );
       }
     }
     return null;
   }
 
   @override
-  Future<void> install(UpdateInfo info) async {
+  Future<bool> canInstall() async => await _channel.invokeMethod<bool>('canInstall') ?? true;
+
+  @override
+  Future<bool> requestInstallPermission() async =>
+      await _channel.invokeMethod<bool>('requestPermission') ?? false;
+
+  @override
+  Future<void> install(UpdateInfo info, {void Function(double progress)? onProgress}) async {
     final dir = await getTemporaryDirectory();
+    // Reste früherer Versuche weg, jede APK ist ~70 MB.
+    await for (final f in dir.list()) {
+      if (f is File && RegExp(r'SimpleMigr-.*\.apk$').hasMatch(f.path)) await f.delete();
+    }
     final file = File('${dir.path}/SimpleMigr-${info.version}.apk');
-    final req = await _client.getUrl(Uri.parse(info.apkUrl));
-    req.headers.set(HttpHeaders.userAgentHeader, 'SimpleMigr');
-    final res = await req.close();
-    if (res.statusCode != 200) throw HttpException('HTTP ${res.statusCode}', uri: Uri.parse(info.apkUrl));
+    final HttpClientResponse res;
+    try {
+      final req = await _client.getUrl(Uri.parse(info.apkUrl));
+      req.headers.set(HttpHeaders.userAgentHeader, 'SimpleMigr');
+      res = await req.close();
+    } on SocketException catch (e) {
+      throw UpdateException('Keine Verbindung zum Server.\n${e.message}');
+    }
+    if (res.statusCode != 200) {
+      throw UpdateException('Download fehlgeschlagen (HTTP ${res.statusCode}).');
+    }
+    final total = info.size > 0 ? info.size : res.contentLength;
+    var received = 0;
     final sink = file.openWrite();
     try {
-      await res.pipe(sink);
-    } catch (_) {
-      await sink.close().catchError((_) {});
-      rethrow;
+      await for (final chunk in res) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (total > 0) onProgress?.call(received / total);
+      }
+    } catch (e) {
+      throw UpdateException('Download abgebrochen nach ${_mb(received)}.\n$e');
+    } finally {
+      await sink.close();
     }
-    if (res.contentLength > 0 && await file.length() != res.contentLength) {
-      throw const HttpException('Download unvollständig');
+    if (total > 0 && received != total) {
+      throw UpdateException('Download unvollständig: ${_mb(received)} von ${_mb(total)}.');
     }
     final result = await OpenFilex.open(file.path, type: 'application/vnd.android.package-archive');
-    if (result.type != ResultType.done) throw Exception(result.message);
+    if (result.type != ResultType.done) {
+      throw UpdateException('Installer ließ sich nicht öffnen.\n${result.message}');
+    }
   }
+
+  static String _mb(int bytes) => '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
 }

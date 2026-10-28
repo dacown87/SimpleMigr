@@ -183,25 +183,27 @@ Update 1.0.5 → 1.0.6: neue Version erkannt, APK geladen, Installation scheiter
 Bereits geprüft und in Ordnung: beide Release-APKs mit demselben Schlüssel signiert
 (SHA-256 `3aea8f63…`, auch lokal `~/.simplemigr/release.jks`), versionCode 6 → 7,
 1.0.5 hat `REQUEST_INSTALL_PACKAGES` und den FileProvider von open_filex, APK liegt im Cache (freigegeben).
-Ursache noch unklar, weil `installUpdate` den Fehler verschluckt („Update fehlgeschlagen“).
+`installUpdate` verschluckt den Fehler („Update fehlgeschlagen“), daher erst per adb geklärt.
 
 **1. Ursache klären (mit Handy)**
-- [ ] Was wurde angezeigt: SnackBar „Update fehlgeschlagen“, Installer mit Fehler (welcher?) oder nichts?
-- [ ] Wie kam 1.0.5 aufs Handy: GitHub-APK oder `flutter run`/`flutter install`? Debug-Schlüssel (`fdc14b11…`) ≠ Release-Schlüssel → „Paket steht in Konflikt“
-- [ ] Per adb: Signatur der installierten App (`adb shell pm path …` + `adb pull` + `apksigner verify --print-certs`), Installationsversuch mit `adb logcat` mitlesen
-- [ ] Prüfen: „Unbekannte Apps installieren“ für SimpleMigr erlaubt? Play Protect-Meldung?
-- [ ] Bei Signaturkonflikt: einmalig manuell umsteigen (Sicherung exportieren, deinstallieren, GitHub-APK installieren, Sicherung importieren); kein Code-Fix möglich
+- [x] Pixel 9a (Android 17), 1.0.5 per Paket-Installer aus der GitHub-APK, Signatur = Release-Schlüssel → kein Signaturkonflikt
+- [x] „Unbekannte Apps installieren“ war für SimpleMigr nicht erlaubt (`appops REQUEST_INSTALL_PACKAGES` = default).
+  Ablauf laut logcat: open_filex → Installer → `MANAGE_UNKNOWN_APP_SOURCES` → erlauben → Installer startet neu → Installation ok.
+  Beim ersten Versuch ging dieser Umweg verloren; die App erklärt ihn nicht. Zweiter Versuch (28.10.) hat 1.0.6 installiert.
+- [ ] Samsung (Handy der Frau): Installation brachte einen Fehler. Genauen Text/Screenshot besorgen, dann per adb + logcat nachstellen.
+  Verdacht: Samsung „Automatische Sperre“ (Auto Blocker, One UI 6+) blockiert Apps aus nicht autorisierten Quellen, oder Play Protect
 
 **2. Code (`lib/update/updater.dart`, `lib/ui/version_tile.dart`, `MainActivity.kt`)**
-- [ ] Fehlergrund anzeigen: `installUpdate` zeigt die Meldung (HTTP-Status, „Download unvollständig“, open_filex-Ergebnis) statt nur „Update fehlgeschlagen“
-- [ ] Vor dem Öffnen des Installers `canRequestPackageInstalls()` prüfen (kleiner MethodChannel in `MainActivity`); falls nein: Dialog mit Erklärung, dann `ACTION_MANAGE_UNKNOWN_APP_SOURCES` öffnen und danach den Installer erneut starten
-- [ ] Download gegen die Größe aus der Release-Abfrage (`assets[].size`) prüfen, nicht nur gegen `contentLength` (fehlt bei manchen Antworten)
-- [ ] Fortschritt beim Laden (~67 MB) in der SnackBar (Prozent), damit kein Eindruck „hängt“ entsteht
-- [ ] Alte `SimpleMigr-*.apk` im Cache vor dem Download löschen
+- [x] Fehlergrund anzeigen: `installUpdate` zeigt die Meldung (HTTP-Status, „Download unvollständig“, open_filex-Ergebnis) statt nur „Update fehlgeschlagen“ – als Fenster mit markierbarem Text
+- [x] **Hauptursache:** Vor dem Öffnen des Installers `canRequestPackageInstalls()` prüfen (kleiner MethodChannel in `MainActivity`); falls nein: Dialog mit Erklärung („Einmalig erlauben, dann zurück“), dann `ACTION_MANAGE_UNKNOWN_APP_SOURCES` für unser Paket öffnen und nach der Rückkehr (`onResume`/ActivityResult) den Installer selbst erneut starten
+- [ ] Hinweis-Text, falls die Installation auf Samsung durch die Automatische Sperre blockiert wird (je nach Befund vom Samsung)
+- [x] Download gegen die Größe aus der Release-Abfrage (`assets[].size`) prüfen, nicht nur gegen `contentLength` (fehlt bei manchen Antworten)
+- [x] Fortschritt beim Laden (~67 MB) in der SnackBar (Prozent), damit kein Eindruck „hängt“ entsteht
+- [x] Alte `SimpleMigr-*.apk` im Cache vor dem Download löschen
 
 **3. Tests**
-- [ ] `test/updater_test.dart`: `parseRelease` übernimmt `size`; abgebrochener Download → Fehler mit Grund
-- [ ] Widget-Test: fehlgeschlagene Installation zeigt den Grund in der SnackBar
+- [x] `test/updater_test.dart`: `parseRelease` übernimmt `size`
+- [x] Widget-Tests: Fehlerfenster mit Grund; ohne Erlaubnis erst Erklärung, dann Einstellung; abgelehnt → Fehlerfenster, kein Download
 
 **4. Prüfen vor dem Release**
 - [ ] Emulator: GitHub-APK 1.0.6 installieren, Release 1.0.7 veröffentlichen, Update aus der App durchspielen (mit und ohne Erlaubnis für unbekannte Apps)

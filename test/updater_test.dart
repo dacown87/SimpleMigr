@@ -8,15 +8,32 @@ import 'package:simplemigr/update/updater.dart';
 import 'helpers.dart';
 
 class _FakeUpdater implements Updater {
-  _FakeUpdater(this.info);
+  _FakeUpdater(this.info, {this.allowed = true, this.grant = true, this.error});
   final UpdateInfo? info;
+  bool allowed;
+  final bool grant;
+  final Object? error;
   UpdateInfo? installed;
+  int permissionRequests = 0;
 
   @override
   Future<UpdateInfo?> check() async => info;
 
   @override
-  Future<void> install(UpdateInfo i) async => installed = i;
+  Future<bool> canInstall() async => allowed;
+
+  @override
+  Future<bool> requestInstallPermission() async {
+    permissionRequests++;
+    return allowed = grant;
+  }
+
+  @override
+  Future<void> install(UpdateInfo i, {void Function(double progress)? onProgress}) async {
+    if (error != null) throw error!;
+    onProgress?.call(1);
+    installed = i;
+  }
 }
 
 void main() {
@@ -37,12 +54,13 @@ void main() {
       'tag_name': 'v1.0.5',
       'assets': [
         {'name': 'notes.txt', 'browser_download_url': 'https://x/notes.txt'},
-        {'name': 'SimpleMigr-1.0.5.apk', 'browser_download_url': 'https://x/a.apk'},
+        {'name': 'SimpleMigr-1.0.5.apk', 'browser_download_url': 'https://x/a.apk', 'size': 67845160},
       ],
     };
     final info = GithubUpdater.parseRelease(json, '1.0.4')!;
     expect(info.version, '1.0.5');
     expect(info.apkUrl, 'https://x/a.apk');
+    expect(info.size, 67845160);
     expect(GithubUpdater.parseRelease(json, '1.0.5'), isNull);
     expect(GithubUpdater.parseRelease({'tag_name': 'v1.0.5', 'assets': []}, '1.0.4'), isNull);
     expect(GithubUpdater.parseRelease({}, '1.0.4'), isNull);
@@ -128,5 +146,69 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('install-update')));
     await tester.pumpAndSettle();
     expect(u.installed?.version, '1.0.7');
+  });
+
+  testWidgets('Fehler beim Update: Fenster mit Grund', (tester) async {
+    final u = _FakeUpdater(const UpdateInfo(version: '1.0.7', apkUrl: 'https://x/a.apk'),
+        error: const UpdateException('Download unvollständig: 10.0 MB von 64.7 MB.'));
+    await tester.pumpWidget(tile(u));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('check-update')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('install-update')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('update-error')), findsOneWidget);
+    expect(find.text('Download unvollständig: 10.0 MB von 64.7 MB.'), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('update-error')), findsNothing);
+  });
+
+  testWidgets('Ohne Erlaubnis: erst erklären, dann Einstellung, dann installieren', (tester) async {
+    final u = _FakeUpdater(const UpdateInfo(version: '1.0.7', apkUrl: 'https://x/a.apk'),
+        allowed: false);
+    await tester.pumpWidget(tile(u));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('check-update')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('install-update')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('install-permission')), findsOneWidget);
+    expect(u.permissionRequests, 0);
+    await tester.tap(find.text('Weiter'));
+    await tester.pumpAndSettle();
+    expect(u.permissionRequests, 1);
+    expect(u.installed?.version, '1.0.7');
+  });
+
+  testWidgets('Erlaubnis nicht erteilt: Fenster mit Grund, kein Download', (tester) async {
+    final u = _FakeUpdater(const UpdateInfo(version: '1.0.7', apkUrl: 'https://x/a.apk'),
+        allowed: false, grant: false);
+    await tester.pumpWidget(tile(u));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('check-update')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('install-update')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Weiter'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('update-error')), findsOneWidget);
+    expect(find.textContaining('Unbekannte Apps installieren'), findsOneWidget);
+    expect(u.installed, isNull);
+  });
+
+  testWidgets('Ohne Erlaubnis: Abbrechen startet nichts', (tester) async {
+    final u = _FakeUpdater(const UpdateInfo(version: '1.0.7', apkUrl: 'https://x/a.apk'),
+        allowed: false);
+    await tester.pumpWidget(tile(u));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('check-update')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('install-update')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(u.permissionRequests, 0);
+    expect(u.installed, isNull);
   });
 }
