@@ -7,17 +7,68 @@ import '../update/updater.dart';
 /// (`YYYY-MM-DD`). Lokale Builds haben keins.
 const buildDate = String.fromEnvironment('BUILD_DATE');
 
-/// Lädt das Update und öffnet den Installer; Fortschritt und Fehler als SnackBar.
-Future<void> installUpdate(ScaffoldMessengerState messenger, Updater updater, UpdateInfo info) async {
-  messenger
-    ..hideCurrentMaterialBanner()
-    ..showSnackBar(const SnackBar(content: Text('Update wird geladen …')));
+/// Lädt das Update und öffnet den Installer. Fehlt die Erlaubnis zum Installieren,
+/// wird sie vorher erklärt und eingeholt; Fortschritt als SnackBar, Fehler als Fenster.
+Future<void> installUpdate(BuildContext context, Updater updater, UpdateInfo info) async {
+  final messenger = ScaffoldMessenger.of(context)..hideCurrentMaterialBanner();
   try {
-    await updater.install(info);
-  } catch (_) {
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Update fehlgeschlagen')));
+    if (!await updater.canInstall()) {
+      if (!context.mounted) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          key: const ValueKey('install-permission'),
+          title: const Text('Installation erlauben'),
+          content: const Text('Damit SimpleMigr das Update installieren kann, braucht es einmalig '
+              'die Erlaubnis „Unbekannte Apps installieren“.\n\n'
+              'Im nächsten Fenster den Schalter „Zulassen“ einschalten und dann '
+              'mit „Zurück“ zur App wechseln. Danach startet das Update.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Abbrechen')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Weiter')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      if (!await updater.requestInstallPermission()) {
+        throw const UpdateException('Die Erlaubnis „Unbekannte Apps installieren“ fehlt. '
+            'Ohne sie kann Android das Update nicht installieren.');
+      }
+    }
+    final progress = ValueNotifier<double?>(null);
+    messenger.showSnackBar(SnackBar(
+      duration: const Duration(minutes: 10),
+      content: ValueListenableBuilder<double?>(
+        valueListenable: progress,
+        builder: (_, p, _) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(p == null ? 'Update wird geladen …' : 'Update wird geladen … ${(p * 100).round()} %'),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: p),
+          ],
+        ),
+      ),
+    ));
+    try {
+      await updater.install(info, onProgress: (p) => progress.value = p);
+    } finally {
+      messenger.hideCurrentSnackBar();
+    }
+  } catch (e) {
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const ValueKey('update-error'),
+        title: const Text('Update fehlgeschlagen'),
+        content: SelectableText('$e'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
+        ],
+      ),
+    );
   }
 }
 
@@ -69,7 +120,7 @@ class _VersionTileState extends State<VersionTile> {
         ],
       ),
     );
-    if (ok == true) await installUpdate(messenger, updater, info);
+    if (ok == true && mounted) await installUpdate(context, updater, info);
   }
 
   @override

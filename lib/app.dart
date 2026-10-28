@@ -102,7 +102,7 @@ class HomeShellState extends State<HomeShell> {
           child: const Text('Später'),
         ),
         TextButton(
-          onPressed: () => installUpdate(messenger, updater, info),
+          onPressed: () => installUpdate(context, updater, info),
           child: const Text('Installieren'),
         ),
       ],
