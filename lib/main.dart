@@ -8,6 +8,7 @@ import 'reminder.dart';
 import 'ui/data_tiles.dart';
 import 'ui/export_tile.dart';
 import 'ui/reminder_tile.dart';
+import 'ui/version_tile.dart';
 import 'ui/weather_tile.dart';
 import 'update/updater.dart';
 import 'weather/weather_api.dart';
@@ -26,14 +27,16 @@ Future<void> main() async {
   final weatherApi = OpenMeteoApi();
   final location = await LocationStore.load();
   final weatherSync = WeatherSync(repo: repo, api: weatherApi, location: location)..start();
+  final updater = GithubUpdater();
   runApp(SimpleMigrApp(
     repo: repo,
     navigatorKey: navKey,
     shellKey: shellKey,
-    updater: GithubUpdater(),
+    updater: updater,
     generalTiles: [
       ReminderTile(reminder: reminder),
       WeatherPlaceTile(location: location, api: weatherApi),
+      VersionTile(updater: updater),
     ],
     dataTiles: [
       ExportTile(repo: repo),

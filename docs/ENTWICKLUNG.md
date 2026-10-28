@@ -48,6 +48,7 @@ flutter test
    git push origin main v1.0.4
    ```
 4. Der Workflow [release.yml](../.github/workflows/release.yml) baut die signierte APK und veröffentlicht das GitHub-Release.
+   Dabei setzt er `--dart-define=BUILD_DATE` auf das Datum des Release-Commits; die App zeigt es unter Einstellungen → Allgemein neben der Version. Lokale Builds zeigen dort „Testversion“.
 
 ### Signierung
 

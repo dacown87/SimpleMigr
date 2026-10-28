@@ -8,6 +8,7 @@ import 'ui/month_screen.dart';
 import 'ui/settings_screen.dart';
 import 'ui/theme.dart';
 import 'ui/today_screen.dart';
+import 'ui/version_tile.dart';
 
 class SimpleMigrApp extends StatelessWidget {
   const SimpleMigrApp({
@@ -101,18 +102,7 @@ class HomeShellState extends State<HomeShell> {
           child: const Text('Später'),
         ),
         TextButton(
-          onPressed: () async {
-            messenger
-              ..hideCurrentMaterialBanner()
-              ..showSnackBar(const SnackBar(content: Text('Update wird geladen …')));
-            try {
-              await updater.install(info);
-            } catch (_) {
-              messenger
-                ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Update fehlgeschlagen')));
-            }
-          },
+          onPressed: () => installUpdate(messenger, updater, info),
           child: const Text('Installieren'),
         ),
       ],
