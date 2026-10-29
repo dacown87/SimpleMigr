@@ -23,17 +23,23 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const tabs = TabBar(
+      tabs: [
+        Tab(text: 'Einträge'),
+        Tab(text: 'Allgemein'),
+        Tab(text: 'Daten'),
+      ],
+    );
     return DefaultTabController(
       length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Einstellungen'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Einträge'),
-              Tab(text: 'Allgemein'),
-              Tab(text: 'Daten'),
-            ],
+          // Wie die untere Leiste: Schrift höchstens 1,3-fach, sonst werden
+          // die Reiter bei sehr großer Systemschrift abgeschnitten.
+          bottom: PreferredSize(
+            preferredSize: tabs.preferredSize,
+            child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: tabs),
           ),
         ),
         body: TabBarView(
@@ -282,7 +288,7 @@ class _NameResult {
   final bool delete;
 }
 
-/// Segmente oben, darunter der Inhalt des gewählten Segments.
+/// Auswahl oben, darunter der Inhalt der gewählten Gruppe.
 class _EntryGroups extends StatefulWidget {
   const _EntryGroups({required this.labels, required this.builder});
 
@@ -302,22 +308,23 @@ class _EntryGroupsState extends State<_EntryGroups> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: SegmentedButton<int>(
-            showSelectedIcon: false,
-            segments: [
+          // Chips statt SegmentedButton: bricht bei großer Schrift in eine
+          // zweite Zeile um, statt die Beschriftungen abzuschneiden.
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
               for (var i = 0; i < widget.labels.length; i++)
-                ButtonSegment(
-                  value: i,
+                ChoiceChip(
                   label: Text(
                     widget.labels[i],
                     key: ValueKey('entries-${widget.labels[i]}'),
-                    maxLines: 1,
-                    softWrap: false,
                   ),
+                  showCheckmark: false,
+                  selected: _index == i,
+                  onSelected: (_) => setState(() => _index = i),
                 ),
             ],
-            selected: {_index},
-            onSelectionChanged: (s) => setState(() => _index = s.first),
           ),
         ),
         widget.builder(_index),

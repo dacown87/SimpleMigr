@@ -3,6 +3,15 @@
 Einfaches Migräne-Tagebuch für Android, nachgebaut nach der Papiertabelle:
 Zeilen = Symptome, Spalten = Tage eines Monats.
 
+<p>
+  <img src="docs/screenshots/heute.png" width="200" alt="Heute: Schnelleintrag mit Migräne, Schmerzen, Symptomen und Medikamenten">
+  <img src="docs/screenshots/monat.png" width="200" alt="Monat: Raster wie auf Papier mit Migräne, Schmerzen, Periode und aufklappbaren Abschnitten">
+  <img src="docs/screenshots/migraene.png" width="200" alt="Meine Migräne: die eigene Migräne in einzelnen Punkten beschreiben">
+  <img src="docs/screenshots/optionen.png" width="200" alt="Einstellungen: Einträge der Hauptansicht anpassen, hier die Auslöser">
+</p>
+
+<sub>Screenshots mit erfundenen Beispieldaten.</sub>
+
 ## Download
 
 Die fertige APK gibt es unter [Releases](https://github.com/dacown87/SimpleMigr/releases/latest).
