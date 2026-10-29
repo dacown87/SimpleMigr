@@ -131,8 +131,10 @@ class HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.edit_note), label: 'Heute'),
           NavigationDestination(icon: Icon(Icons.calendar_month), label: 'Monat'),
-          NavigationDestination(icon: Icon(Icons.psychology_outlined), label: 'Meine Migräne'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Einstellungen'),
+          // Kurze Beschriftungen: bei großer Schrift oder Anzeige (z. B. Samsung)
+          // brechen längere um oder werden abgeschnitten.
+          NavigationDestination(icon: Icon(Icons.psychology_outlined), label: 'Migräne'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Optionen'),
         ],
       ),
     );

@@ -42,7 +42,10 @@ class _TodayScreenState extends State<TodayScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(germanDate(_today))),
+      appBar: AppBar(
+        // Bei großer Schrift verkleinern statt mit „…“ abschneiden.
+        title: FittedBox(fit: BoxFit.scaleDown, child: Text(germanDate(_today))),
+      ),
       body: SafeArea(
         child: DayEditor(key: ValueKey(_today), repo: widget.repo, date: _today),
       ),

@@ -106,7 +106,7 @@ void main() {
     await tester.tap(find.text('Monat'));
     await settle(tester);
     expect(find.text('September 2026'), findsOneWidget);
-    await tester.tap(find.text('Einstellungen'));
+    await tester.tap(find.text('Optionen'));
     await settle(tester);
     expect(find.text('Einstellungen'), findsWidgets);
     expect(find.text('Symptome'), findsOneWidget);

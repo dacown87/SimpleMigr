@@ -98,11 +98,16 @@ class _MonthScreenState extends State<MonthScreen> {
           return Column(
             children: [
               Expanded(
-                child: MonthGrid(
-                  key: ValueKey((m.year, m.month)),
-                  data: m,
-                  today: dateOnly(widget.clock()),
-                  onDayTap: _openDay,
+                // Dichtes Raster wie auf Papier: große Systemschrift nur begrenzt
+                // übernehmen, die Namensspalte wächst entsprechend mit.
+                child: MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: 1.15,
+                  child: MonthGrid(
+                    key: ValueKey((m.year, m.month)),
+                    data: m,
+                    today: dateOnly(widget.clock()),
+                    onDayTap: _openDay,
+                  ),
                 ),
               ),
               Container(
@@ -125,6 +130,28 @@ class _MonthScreenState extends State<MonthScreen> {
     );
   }
 }
+
+/// Breite der Namensspalte: mindestens [_nameWidth], bei großer Schrift so
+/// breit, dass die Abschnittstitel ganz hineinpassen, höchstens 45 % des Bildschirms.
+double _nameColumnWidth(BuildContext context, List<String> titles) {
+  final scaler = MediaQuery.textScalerOf(context);
+  final style = DefaultTextStyle.of(context).style.merge(_headerStyle);
+  var widest = 0.0;
+  for (final t in titles) {
+    final painter = TextPainter(
+      text: TextSpan(text: t, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout();
+    if (painter.width > widest) widest = painter.width;
+    painter.dispose();
+  }
+  final needed = (widest + 12 + 20 + 4).ceilToDouble() + 4; // Padding, Pfeil, Reserve
+  final max = MediaQuery.sizeOf(context).width * 0.45;
+  return needed.clamp(_nameWidth, max < _nameWidth ? _nameWidth : max);
+}
+
+const _headerStyle = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
 
 /// Reihenfolge der Zeilen: Gruppe, dann Sortierung.
 List<Symptom> gridRows(List<Symptom> symptoms) => [
@@ -213,6 +240,7 @@ class _MonthGridState extends State<MonthGrid> {
     final days = monthDays(data.year, data.month);
     final (main, sections) = _gridLayout(data.symptoms);
     final line = BorderSide(color: AppColors.surfaceHigh.withValues(alpha: 0.8));
+    final nameWidth = _nameColumnWidth(context, [for (final g in sections) g.title]);
 
     Widget nameCell(String text, {bool dim = false}) => Container(
           height: _cell,
@@ -245,7 +273,7 @@ class _MonthGridState extends State<MonthGrid> {
                   child: Text(title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                      style: _headerStyle),
                 ),
                 Icon(open ? Icons.expand_less : Icons.expand_more, size: 20),
               ],
@@ -284,7 +312,7 @@ class _MonthGridState extends State<MonthGrid> {
         children: [
           // Feste Spalte mit den Namen
           SizedBox(
-            width: _nameWidth,
+            width: nameWidth,
             child: Column(
               children: [
                 const SizedBox(height: _cell),
