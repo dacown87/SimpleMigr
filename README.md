@@ -33,6 +33,7 @@ Beim Start prüft die App auf GitHub, ob es eine neuere Version gibt, und zeigt 
 - Auslöser aus einer erweiterbaren Liste plus freie Notiz
 - Wetter wird mitgespeichert; der Ort lässt sich per Name oder Postleitzahl suchen (Standard Deutschland)
 - Tägliche Erinnerung
+- Monatsfeier: am Monatsende eine Benachrichtigung, die dich für den geschafften Monat feiert
 - „Meine Migräne“: die eigene Migräne in einzelnen Punkten beschreiben (hinzufügen, bearbeiten, verschieben, wischen zum Löschen); steht im PDF auf der ersten Seite
 - PDF-Export im Look der Papiertabelle
 - Zusammenfassung für den Arzt (eine Seite A4): Verlauf je Monat, Attacken, Aura- und Begleitsymptome nach Gruppen, Zyklusbezug, Medikamente, datenbasierte Fragen. Rechnet lokal, ohne KI

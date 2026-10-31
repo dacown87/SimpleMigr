@@ -10,11 +10,12 @@ class AppColors {
   static const surfaceHigh = Color(0xFFEFCCD9); // Felder (aus) und Rasterlinien
   static const text = Color(0xFF4F3A45);
   static const textDim = Color(0xFF9B7F8C);
-  static const migraine = Color(0xFFF2D675); // Pastellgelb
+  static const migraine = Color(0xFFE9C655); // Gelb, etwas kräftiger als Pastell
   static const onMigraine = Color(0xFF4A3D10);
   static const period = Color(0xFFE88A97); // Pastellrot
   static const accent = Color(0xFFD97BA4); // Rosa
   static const onAccent = Color(0xFF4A1F33);
+  static const gold = Color(0xFFC99A1E); // Monatsfeier, dunkler als Migräne-Gelb
 }
 
 /// Farben hängen fest am Systemschlüssel.
