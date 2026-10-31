@@ -18,7 +18,7 @@ abstract class Reminder {
 }
 
 class LocalReminder implements Reminder {
-  LocalReminder._(this._prefs, this._plugin);
+  LocalReminder._(this._prefs, this.plugin);
 
   static const _id = 1;
   static const _kEnabled = 'reminder_enabled';
@@ -26,9 +26,11 @@ class LocalReminder implements Reminder {
   static const _kMinute = 'reminder_minute';
 
   final SharedPreferences _prefs;
-  final FlutterLocalNotificationsPlugin _plugin;
+  /// Auch für die Monatsfeier genutzt; nur einmal initialisieren.
+  final FlutterLocalNotificationsPlugin plugin;
 
-  static Future<LocalReminder> create({required VoidCallback onTap}) async {
+  /// [onTap] bekommt den Payload der angetippten Benachrichtigung.
+  static Future<LocalReminder> create({required void Function(String? payload) onTap}) async {
     final prefs = await SharedPreferences.getInstance();
     final plugin = FlutterLocalNotificationsPlugin();
     tzdata.initializeTimeZones();
@@ -43,7 +45,7 @@ class LocalReminder implements Reminder {
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@drawable/ic_notification'),
       ),
-      onDidReceiveNotificationResponse: (_) => onTap(),
+      onDidReceiveNotificationResponse: (r) => onTap(r.payload),
     );
     // Geplante Erinnerungen überleben Neustart über den Boot-Receiver des
     // Plugins; hier nur sicherstellen, dass der Zustand zu den Einstellungen passt.
@@ -58,7 +60,7 @@ class LocalReminder implements Reminder {
   TimeOfDay get time =>
       TimeOfDay(hour: _prefs.getInt(_kHour) ?? 20, minute: _prefs.getInt(_kMinute) ?? 0);
 
-  AndroidFlutterLocalNotificationsPlugin? get _android => _plugin
+  AndroidFlutterLocalNotificationsPlugin? get _android => plugin
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
   @override
@@ -76,7 +78,7 @@ class LocalReminder implements Reminder {
   @override
   Future<void> disable() async {
     await _prefs.setBool(_kEnabled, false);
-    await _plugin.cancel(id: _id);
+    await plugin.cancel(id: _id);
   }
 
   @override
@@ -91,7 +93,7 @@ class LocalReminder implements Reminder {
     final now = tz.TZDateTime.now(tz.local);
     var at = tz.TZDateTime(tz.local, now.year, now.month, now.day, t.hour, t.minute);
     if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
-    await _plugin.zonedSchedule(
+    await plugin.zonedSchedule(
       id: _id,
       title: 'SimpleMigr',
       body: 'Heute schon eingetragen?',

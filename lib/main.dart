@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'app.dart';
+import 'celebration.dart';
 import 'data/database.dart';
 import 'data/repository.dart';
 import 'data/transfer.dart';
 import 'reminder.dart';
+import 'ui/celebration_screen.dart';
+import 'ui/celebration_tile.dart';
 import 'ui/data_tiles.dart';
 import 'ui/export_tile.dart';
 import 'ui/reminder_tile.dart';
@@ -20,11 +23,21 @@ Future<void> main() async {
   final repo = Repository(AppDatabase());
   final shellKey = GlobalKey<HomeShellState>();
   final navKey = GlobalKey<NavigatorState>();
-  final reminder = await LocalReminder.create(onTap: () {
-    // Antippen der Erinnerung öffnet „Heute“.
+  void openCelebration(({int year, int month}) m) =>
+      navKey.currentState?.push(MaterialPageRoute<void>(
+        builder: (_) => CelebrationScreen(repo: repo, year: m.year, month: m.month),
+      ));
+  final reminder = await LocalReminder.create(onTap: (payload) {
     navKey.currentState?.popUntil((r) => r.isFirst);
-    shellKey.currentState?.showToday();
+    final month = celebrationMonth(payload);
+    if (month != null) {
+      openCelebration(month);
+    } else {
+      // Antippen der Erinnerung öffnet „Heute“.
+      shellKey.currentState?.showToday();
+    }
   });
+  final celebration = await LocalCelebration.create(reminder.plugin);
   final weatherApi = OpenMeteoApi();
   final location = await LocationStore.load();
   final weatherSync = WeatherSync(repo: repo, api: weatherApi, location: location)..start();
@@ -36,6 +49,7 @@ Future<void> main() async {
     updater: updater,
     generalTiles: [
       ReminderTile(reminder: reminder),
+      CelebrationTile(celebration: celebration, repo: repo),
       WeatherPlaceTile(location: location, api: weatherApi),
       VersionTile(updater: updater),
     ],
@@ -55,4 +69,12 @@ Future<void> main() async {
       ),
     ],
   ));
+  // App wurde über die Monatsfeier-Benachrichtigung gestartet.
+  final launch = await reminder.plugin.getNotificationAppLaunchDetails();
+  final launchMonth = launch?.didNotificationLaunchApp == true
+      ? celebrationMonth(launch?.notificationResponse?.payload)
+      : null;
+  if (launchMonth != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => openCelebration(launchMonth));
+  }
 }
