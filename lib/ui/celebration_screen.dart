@@ -150,15 +150,19 @@ class _CelebrationScreenState extends State<CelebrationScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
-        Text(
-          '🎉 ${monthName(widget.month).toUpperCase()} GESCHAFFT! 🎉',
-          key: const ValueKey('celebration-title'),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
-            color: AppColors.onMigraine,
+        // Eine Zeile, die bei langen Monatsnamen oder großer Schrift schrumpft.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '🎉 ${monthName(widget.month).toUpperCase()} GESCHAFFT! 🎉',
+            key: const ValueKey('celebration-title'),
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+              color: AppColors.onMigraine,
+            ),
           ),
         ),
         const SizedBox(height: 12),
