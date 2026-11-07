@@ -1,4 +1,5 @@
 import 'attacks.dart';
+import 'cycle.dart' as cycle;
 import 'database.dart';
 import 'dates.dart';
 import 'repository.dart';
@@ -57,6 +58,9 @@ class ReportMedication {
   /// Monatsindex in [Report.months] -> Einnahmetage.
   final daysPerMonth = <int, int>{};
   int helpedDays = 0;
+
+  /// Einnahmen insgesamt (mehrere pro Tag möglich).
+  int doses = 0;
 
   int get totalDays => daysPerMonth.values.fold(0, (a, b) => a + b);
 
@@ -133,9 +137,6 @@ class Report {
   static const triptanLimit = 10;
   static const painkillerLimit = 15;
 
-  /// Periodenbeginn = erster Periodentag nach so vielen periodenfreien Tagen.
-  static const periodGap = 5;
-
   /// Längere Abstände zwischen zwei Periodenbeginnen gelten als Erfassungslücke.
   static const maxCycle = 60;
 
@@ -211,8 +212,10 @@ class Report {
     final r = Report._(start, dateOnly(to), requestedFrom: requested);
     final byKey = {for (final s in symptoms) if (s.key != null) s.key!: s};
     final days = <String, Map<int, int>>{};
+    final helpedRows = <String>{}; // „Datum:Medikament“, das geholfen hat
     for (final v in values) {
       if (v.value != 0) (days[v.date] ??= {})[v.symptomId] = v.value;
+      if (v.helped) helpedRows.add('${v.date}:${v.symptomId}');
     }
     int value(DateTime d, String key) {
       final s = byKey[key];
@@ -291,13 +294,7 @@ class Report {
           if (e.value.containsKey(period.id)) fromKey(e.key),
     ]..sort();
     if (periodDays.isNotEmpty) {
-      final periodSet = {for (final d in periodDays) toKey(d)};
-      final allStarts = [
-        for (final d in periodDays)
-          if (List.generate(periodGap, (i) => DateTime(d.year, d.month, d.day - i - 1))
-              .every((p) => !periodSet.contains(toKey(p))))
-            d,
-      ];
+      final allStarts = cycle.periodStarts(periodDays);
       r.periodStarts = allStarts.where(inRange).toList();
       for (var i = 1; i < allStarts.length; i++) {
         final len = allStarts[i].difference(allStarts[i - 1]).inDays;
@@ -331,9 +328,18 @@ class Report {
         taken.add(unnamed);
       }
       final mi = monthIndex['${d.year}-${d.month}']!;
+      for (final id in day.keys) {
+        final m = meds[id];
+        if (m == null) continue;
+        m.doses += day[id]!;
+        if (helpedRows.contains('${toKey(d)}:$id')) m.helpedDays++;
+      }
+      if (taken.contains(unnamed)) {
+        unnamed.doses++;
+        if (helped != null && day.containsKey(helped.id)) unnamed.helpedDays++;
+      }
       for (final m in taken) {
         m.daysPerMonth[mi] = (m.daysPerMonth[mi] ?? 0) + 1;
-        if (helped != null && day.containsKey(helped.id)) m.helpedDays++;
       }
     }
     r.medications.addAll([...meds.values, unnamed].where((m) => m.totalDays > 0));

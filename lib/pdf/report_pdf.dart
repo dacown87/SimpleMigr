@@ -411,7 +411,8 @@ List<String> medicationText(Report r) {
         if (m.daysPerMonth[i] != null) '${_monthShort(r.months[i])} ${m.daysPerMonth[i]}',
     ];
     final kind = m.unnamed ? '' : (m.triptan ? ' (Triptan)' : '');
-    var line = '${m.name}$kind: ${m.totalDays} Einnahmetage (${perMonth.join(', ')}); '
+    final doses = m.doses > m.totalDays ? ', ${m.doses} Einnahmen insgesamt' : '';
+    var line = '${m.name}$kind: ${m.totalDays} Einnahmetage (${perMonth.join(', ')})$doses; '
         '${m.helpedDays == 0 ? 'Wirkung nicht erfasst' : 'hat geholfen an ${m.helpedDays} '
             'von ${m.totalDays} Tagen'}';
     final over = [

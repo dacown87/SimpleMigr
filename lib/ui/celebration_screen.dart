@@ -114,7 +114,7 @@ class _CelebrationScreenState extends State<CelebrationScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.migraine, AppColors.background, AppColors.accent],
+            colors: [AppColors.sunny, AppColors.background, AppColors.accent],
             stops: [0, 0.55, 1],
           ),
         ),
@@ -161,7 +161,7 @@ class _CelebrationScreenState extends State<CelebrationScreen>
               fontSize: 26,
               fontWeight: FontWeight.w900,
               letterSpacing: 1.5,
-              color: AppColors.onMigraine,
+              color: AppColors.onSunny,
             ),
           ),
         ),
@@ -279,7 +279,7 @@ class _Medal extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppColors.migraine, AppColors.gold, AppColors.migraine],
+            colors: [AppColors.sunny, AppColors.gold, AppColors.sunny],
           ),
           borderRadius: BorderRadius.circular(40),
           boxShadow: [
@@ -302,7 +302,7 @@ class _Medal extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.onMigraine,
+                  color: AppColors.onSunny,
                 ),
               ),
             ),
@@ -321,7 +321,7 @@ class _Confetti {
   final Color color;
 
   static const _colors = [
-    AppColors.migraine,
+    AppColors.sunny,
     AppColors.gold,
     AppColors.accent,
     AppColors.period,

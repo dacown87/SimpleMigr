@@ -114,16 +114,17 @@ void main() {
 
   test('Medikamente: Substanzen je Monat, ohne Angabe, Hinweis ab 10 Triptantagen', () async {
     final suma = await repo.addSymptom('Sumatriptan', SymptomGroup.medication);
-    final ibu = await repo.addSymptom('Ibuprofen', SymptomGroup.medication);
+    final napro = await repo.addSymptom('Naproxen', SymptomGroup.medication);
     for (final d in span(6, 1, 6, 10)) {
       await repo.setValue(d, suma, 1);
     }
-    await repo.setValue(day(6, 1), ibu, 1);
-    await mark('med_helped', [day(6, 1), day(6, 2)]);
+    await repo.setValue(day(6, 1), napro, 1);
+    await repo.setMedHelped(day(6, 1), suma, true);
+    await repo.setMedHelped(day(6, 2), suma, true);
     await mark('medication', [day(5, 20)]);
 
     final r = await Report.load(repo, day(5, 1), day(6, 30));
-    expect(r.medications.map((m) => m.name), ['Sumatriptan', 'Ibuprofen', 'Ohne Angabe der Substanz']);
+    expect(r.medications.map((m) => m.name), ['Sumatriptan', 'Naproxen', 'Ohne Angabe der Substanz']);
     final s = r.medications.first;
     expect([s.triptan, s.totalDays, s.helpedDays, s.daysPerMonth], [true, 10, 2, {1: 10}]);
     expect(r.medications[1].triptan, isFalse);
@@ -210,7 +211,7 @@ void main() {
 
   dbWidgetTest('Editor: Substanz wählen schaltet „Medikamente genommen“ mit ein', (tester, env) async {
     final id = (await tester.runAsync(
-        () => env.repo.addSymptom('Ibuprofen', SymptomGroup.medication)))!;
+        () => env.repo.addSymptom('Naproxen', SymptomGroup.medication)))!;
     await tester.pumpWidget(MaterialApp(
       theme: buildTheme(),
       home: TodayScreen(repo: env.repo, clock: () => DateTime(2026, 9, 4, 10)),
@@ -221,8 +222,8 @@ void main() {
     await tester.tap(find.text('Medikamente'));
     await settle(tester);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Ibuprofen'));
-    await tester.tap(find.text('Ibuprofen'));
+    await tester.ensureVisible(find.text('Naproxen'));
+    await tester.tap(find.text('Naproxen'));
     await settle(tester);
     final med = (await tester.runAsync(() => env.idOf(SymptomKey.medication)))!;
     var d = (await tester.runAsync(() => env.repo.getDay(DateTime(2026, 9, 4))))!;
@@ -232,6 +233,52 @@ void main() {
     await settle(tester);
     d = (await tester.runAsync(() => env.repo.getDay(DateTime(2026, 9, 4))))!;
     expect([d.value(id), d.value(med)], [0, 0]);
+  });
+
+  test('Medikamente: mehrere Einnahmen am Tag zählen, Bericht nennt Einnahmen', () async {
+    final napro = await repo.addSymptom('Naproxen', SymptomGroup.medication);
+    await repo.setValue(day(6, 1), napro, 3);
+    await repo.setValue(day(6, 2), napro, 1);
+    final r = await Report.load(repo, day(6, 1), day(6, 30));
+    expect([r.medications.single.totalDays, r.medications.single.doses], [2, 4]);
+    expect(medicationText(r).single, contains('2 Einnahmetage (Jun 2), 4 Einnahmen insgesamt'));
+
+    // CSV hin und zurück behält die Anzahl.
+    final csv = await DataTransfer(repo).exportCsv();
+    final db2 = AppDatabase(NativeDatabase.memory());
+    addTearDown(db2.close);
+    final repo2 = Repository(db2);
+    final t2 = DataTransfer(repo2);
+    await t2.apply(await t2.read(utf8.encode(csv)));
+    final id2 = (await db2.select(db2.symptoms).get()).firstWhere((s) => s.name == 'Naproxen').id;
+    expect((await repo2.getDay(day(6, 1))).value(id2), 3);
+    expect((await repo2.getDay(day(6, 2))).value(id2), 1);
+  });
+
+  dbWidgetTest('Editor: Medikamente mit + und − zählen', (tester, env) async {
+    final id = (await tester.runAsync(
+        () => env.repo.addSymptom('Naproxen', SymptomGroup.medication)))!;
+    await tester.pumpWidget(MaterialApp(
+      theme: buildTheme(),
+      home: TodayScreen(repo: env.repo, clock: () => DateTime(2026, 9, 4, 10)),
+    ));
+    await settle(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('switch-Medikamente')));
+    await tester.tap(find.text('Medikamente'));
+    await settle(tester);
+    await tester.pumpAndSettle();
+    final plus = find.byKey(ValueKey('med-plus-$id'));
+    await tester.ensureVisible(plus);
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(plus);
+      await settle(tester);
+    }
+    await tester.tap(find.byKey(ValueKey('med-minus-$id')));
+    await settle(tester);
+    expect(tester.widget<Text>(find.byKey(ValueKey('med-count-$id'))).data, '2');
+    final med = (await tester.runAsync(() => env.idOf(SymptomKey.medication)))!;
+    final d = (await tester.runAsync(() => env.repo.getDay(DateTime(2026, 9, 4))))!;
+    expect([d.value(id), d.value(med)], [2, 1]);
   });
 }
 

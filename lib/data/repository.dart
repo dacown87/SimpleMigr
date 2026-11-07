@@ -8,6 +8,7 @@ import 'dates.dart';
 class DayData {
   const DayData({
     this.values = const {},
+    this.helped = const {},
     this.newAttack = false,
     this.note = '',
     this.weather,
@@ -15,6 +16,9 @@ class DayData {
   });
 
   final Map<int, int> values; // symptomId -> Wert (nur ≠ 0)
+
+  /// Medikamente (symptomId), die an diesem Tag geholfen haben.
+  final Set<int> helped;
   final bool newAttack;
   final String note;
   final WeatherDay? weather;
@@ -65,6 +69,7 @@ class MonthData {
     if (w == null) return base;
     return DayData(
       values: base.values,
+      helped: base.helped,
       newAttack: base.newAttack,
       note: base.note,
       weather: w,
@@ -145,6 +150,7 @@ class Repository {
         .getSingleOrNull();
     return DayData(
       values: {for (final r in rows) r.symptomId: r.value},
+      helped: {for (final r in rows) if (r.helped) r.symptomId},
       newAttack: meta?.newAttack ?? false,
       note: meta?.note ?? '',
       weather: w,
@@ -159,17 +165,58 @@ class Repository {
     final key = toKey(date);
     await db.transaction(() async {
       if (value == 0) {
+        final removed = await (db.delete(db.dayValues)
+              ..where((v) => v.date.equals(key) & v.symptomId.equals(symptomId) & v.helped))
+            .go();
         await (db.delete(db.dayValues)
               ..where((v) => v.date.equals(key) & v.symptomId.equals(symptomId)))
             .go();
         if (symptomId == await _idOf(SymptomKey.migraine)) {
           await _writeMeta(key, newAttack: false);
         }
+        if (removed > 0) await _syncDayHelped(key);
       } else {
         await db.into(db.dayValues).insertOnConflictUpdate(
             DayValuesCompanion.insert(date: key, symptomId: symptomId, value: value));
       }
     });
+  }
+
+  /// Alle eingetragenen Periodentage (unsortiert).
+  Future<List<DateTime>> periodDays() async {
+    final id = await _idOf(SymptomKey.period);
+    final rows = await (db.select(
+      db.dayValues,
+    )..where((v) => v.symptomId.equals(id))).get();
+    return [for (final r in rows) fromKey(r.date)];
+  }
+
+  /// „Hat geholfen“ für ein genommenes Medikament. Der Tageswert „Hat geholfen“
+  /// (Raster, PDF, CSV) folgt: an, sobald eines geholfen hat.
+  Future<void> setMedHelped(DateTime date, int symptomId, bool helped) async {
+    final key = toKey(date);
+    await db.transaction(() async {
+      await (db.update(db.dayValues)
+            ..where((v) => v.date.equals(key) & v.symptomId.equals(symptomId)))
+          .write(DayValuesCompanion(helped: Value(helped)));
+      await _syncDayHelped(key);
+    });
+  }
+
+  Future<void> _syncDayHelped(String key) async {
+    final flag = await _idOf(SymptomKey.medHelped);
+    final any = await (db.select(db.dayValues)
+          ..where((v) => v.date.equals(key) & v.helped)
+          ..limit(1))
+        .getSingleOrNull();
+    if (any != null) {
+      await db.into(db.dayValues).insertOnConflictUpdate(
+          DayValuesCompanion.insert(date: key, symptomId: flag, value: 1));
+    } else {
+      await (db.delete(db.dayValues)
+            ..where((v) => v.date.equals(key) & v.symptomId.equals(flag)))
+          .go();
+    }
   }
 
   Future<void> setNewAttack(DateTime date, bool value) =>
@@ -226,15 +273,18 @@ class Repository {
     ];
 
     final byDay = <String, Map<int, int>>{};
+    final helpedByDay = <String, Set<int>>{};
     for (final v in values) {
       if (v.date.compareTo(fromMonth) < 0) continue;
       (byDay[v.date] ??= {})[v.symptomId] = v.value;
+      if (v.helped) (helpedByDay[v.date] ??= {}).add(v.symptomId);
     }
     final metaByDay = {for (final m in metas) m.date: m};
     final days = <String, DayData>{
       for (final k in {...byDay.keys, ...metaByDay.keys})
         k: DayData(
           values: byDay[k] ?? const {},
+          helped: helpedByDay[k] ?? const {},
           newAttack: metaByDay[k]?.newAttack ?? false,
           note: metaByDay[k]?.note ?? '',
         ),
