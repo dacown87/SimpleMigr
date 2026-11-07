@@ -118,16 +118,14 @@ class _DayEditorState extends State<DayEditor> {
           ],
         ),
         if (migraineOn)
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Neue Attacke (/)'),
-            subtitle: const Text('Hier endet eine Attacke, eine neue beginnt'),
+          _SwitchRow(
+            title: 'Neue Attacke (/)',
+            subtitle: 'Hier endet eine Attacke, eine neue beginnt',
             value: day.newAttack,
             onChanged: (v) => guarded(context, () => repo.setNewAttack(date, v)),
           ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(period.name),
+        _SwitchRow(
+          title: period.name,
           value: day.value(period.id) != 0,
           onChanged: (v) => setFlag(period, v),
         ),
@@ -168,17 +166,23 @@ class _DayEditorState extends State<DayEditor> {
             }
           }),
           children: [
-            _ChipWrap(
-              symptoms: [...substances, medHelped],
+            _MedCounters(
+              medications: substances,
               day: day,
-              // Eine Substanz wählen heißt: Medikamente genommen.
-              onToggle: (s, on) => guarded(context, () async {
-                await repo.setValue(date, s.id, on ? 1 : 0);
-                if (on && s.grp == SymptomGroup.medication) {
-                  await repo.setValue(date, medication.id, 1);
-                }
+              // Eine Substanz zählen heißt: Medikamente genommen.
+              onSet: (s, n) => guarded(context, () async {
+                await repo.setValue(date, s.id, n);
+                if (n > 0) await repo.setValue(date, medication.id, 1);
               }),
+              onHelped: (s, on) => guarded(context, () => repo.setMedHelped(date, s.id, on)),
             ),
+            // Ohne eigene Medikamente bleibt „Hat geholfen“ für den ganzen Tag.
+            if (substances.isEmpty)
+              _ChipWrap(
+                symptoms: [medHelped],
+                day: day,
+                onToggle: (s, on) => setFlag(s, on),
+              ),
           ],
         ),
         if (triggers.isNotEmpty)
@@ -307,6 +311,41 @@ class _SectionState extends State<_Section> {
   }
 }
 
+/// Zeile mit Schalter, bündig mit den Schaltern der aufklappbaren Blöcke
+/// (dort steht rechts daneben noch der Pfeil).
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
+    required this.title,
+    this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return MergeSemantics(
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        onTap: () => onChanged(!value),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch(key: ValueKey('switch-$title'), value: value, onChanged: onChanged),
+            const SizedBox(width: 24), // Breite des Pfeils
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _BigToggle extends StatelessWidget {
   const _BigToggle({required this.label, required this.on, required this.onTap});
 
@@ -404,6 +443,115 @@ class _ChipWrap extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Je Medikament eine Zeile mit Anzahl der Einnahmen am Tag und − / +,
+/// nach einer Einnahme darunter „Hat geholfen“.
+class _MedCounters extends StatelessWidget {
+  const _MedCounters({
+    required this.medications,
+    required this.day,
+    required this.onSet,
+    required this.onHelped,
+  });
+
+  static const maxCount = 20;
+
+  final List<Symptom> medications;
+  final DayData day;
+  final void Function(Symptom, int count) onSet;
+  final void Function(Symptom, bool helped) onHelped;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [for (final s in medications) _card(s, day.value(s.id))],
+    );
+  }
+
+  Widget _card(Symptom s, int n) {
+    final helped = day.helped.contains(s.id);
+    return Container(
+      key: ValueKey('med-${s.id}'),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(left: 14),
+      decoration: BoxDecoration(
+        color: n > 0 ? AppColors.accent.withValues(alpha: 0.45) : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.surfaceHigh),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _counter(s, n),
+          if (n > 0)
+            InkWell(
+              key: ValueKey('med-helped-${s.id}'),
+              onTap: () => onHelped(s, !helped),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: helped,
+                      onChanged: (v) => onHelped(s, v ?? false),
+                    ),
+                    const Flexible(
+                      child: Text('Hat geholfen', style: TextStyle(fontSize: 16)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _counter(Symptom s, int n) {
+    return Row(
+      children: [
+        Expanded(
+          // Tippen auf den Namen zählt wie „+“.
+          child: InkWell(
+            onTap: n < maxCount ? () => onSet(s, n + 1) : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(s.name, style: const TextStyle(fontSize: 18)),
+            ),
+          ),
+        ),
+        IconButton(
+          key: ValueKey('med-minus-${s.id}'),
+          tooltip: 'Eine weniger',
+          iconSize: 28,
+          icon: const Icon(Icons.remove_circle_outline),
+          onPressed: n > 0 ? () => onSet(s, n - 1) : null,
+        ),
+        SizedBox(
+          width: 32,
+          child: Text(
+            '$n',
+            key: ValueKey('med-count-${s.id}'),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: n > 0 ? AppColors.text : AppColors.textDim,
+            ),
+          ),
+        ),
+        IconButton(
+          key: ValueKey('med-plus-${s.id}'),
+          tooltip: 'Eine mehr',
+          iconSize: 28,
+          icon: const Icon(Icons.add_circle),
+          color: AppColors.accent,
+          onPressed: n < maxCount ? () => onSet(s, n + 1) : null,
+        ),
+      ],
     );
   }
 }

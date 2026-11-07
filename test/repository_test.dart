@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:simplemigr/data/database.dart';
 import 'package:simplemigr/data/repository.dart';
+import 'package:simplemigr/data/transfer.dart';
 
 void main() {
   late AppDatabase db;
@@ -129,5 +132,67 @@ void main() {
     final sep = await repo.getMonth(2026, 9);
     expect((aug.migraineDays, aug.attacks), (2, 1));
     expect((sep.migraineDays, sep.attacks), (1, 0));
+  });
+
+  test('Vorbelegung: Ibuprofen als normales, änderbares Medikament', () async {
+    final med = (await db.select(db.symptoms).get())
+        .where((s) => s.grp == SymptomGroup.medication)
+        .toList();
+    expect(med.map((s) => s.name), ['Ibuprofen']);
+    expect(med.single.key, isNull); // umbenennen, ausblenden, löschen wie alle eigenen
+    await repo.renameSymptom(med.single.id, 'Ibu 400');
+    await repo.deleteSymptom(med.single.id);
+    expect((await db.select(db.symptoms).get()).where((s) => s.grp == SymptomGroup.medication),
+        isEmpty);
+  });
+
+  test('Hat geholfen je Medikament: Tageswert folgt, Backup behält es', () async {
+    final ibu = (await db.select(db.symptoms).get()).firstWhere((s) => s.name == 'Ibuprofen').id;
+    final suma = await repo.addSymptom('Sumatriptan', SymptomGroup.medication);
+    final helpedFlag =
+        (await db.select(db.symptoms).get()).firstWhere((s) => s.key == SymptomKey.medHelped).id;
+    await repo.setValue(day, ibu, 2);
+    await repo.setValue(day, suma, 1);
+    await repo.setMedHelped(day, suma, true);
+    var d = await repo.getDay(day);
+    expect([d.helped, d.value(helpedFlag)], [{suma}, 1]);
+    // Anzahl ändern lässt den Haken stehen.
+    await repo.setValue(day, suma, 2);
+    expect((await repo.getDay(day)).helped, {suma});
+
+    final json = await DataTransfer(repo).exportBackup();
+    final db2 = AppDatabase(NativeDatabase.memory());
+    addTearDown(db2.close);
+    final t2 = DataTransfer(Repository(db2));
+    await t2.apply(await t2.read(utf8.encode(json)));
+    final suma2 = (await db2.select(db2.symptoms).get()).firstWhere((s) => s.name == 'Sumatriptan').id;
+    expect((await Repository(db2).getDay(day)).helped, {suma2});
+
+    // Medikament auf 0: Haken weg, Tageswert aus.
+    await repo.setValue(day, suma, 0);
+    d = await repo.getDay(day);
+    expect([d.helped, d.value(helpedFlag)], [<int>{}, 0]);
+  });
+
+  test('Migration auf Schema 5: altes „Hat geholfen“ gilt für die Medikamente des Tages', () async {
+    final old = NativeDatabase.memory(setup: (raw) {
+      raw.execute('CREATE TABLE symptoms (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, '
+          'kind INTEGER NOT NULL, grp INTEGER NOT NULL, "key" TEXT NULL UNIQUE, '
+          'sort_order INTEGER NOT NULL, archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)))');
+      raw.execute('CREATE TABLE day_values (date TEXT NOT NULL, symptom_id INTEGER NOT NULL '
+          'REFERENCES symptoms (id), value INTEGER NOT NULL, PRIMARY KEY (date, symptom_id))');
+      raw.execute("INSERT INTO symptoms VALUES (1, 'Migräne', 0, 0, 'migraine', 0, 0)");
+      raw.execute("INSERT INTO symptoms VALUES (2, 'Hat geholfen', 0, 0, 'med_helped', 1, 0)");
+      raw.execute("INSERT INTO symptoms VALUES (3, 'Sumatriptan', 0, 3, NULL, 2, 0)");
+      raw.execute("INSERT INTO day_values VALUES ('2026-09-04', 3, 1), ('2026-09-04', 2, 1), "
+          "('2026-09-05', 3, 1)");
+      raw.execute('PRAGMA user_version = 4');
+    });
+    final up = AppDatabase(old);
+    addTearDown(up.close);
+    final rows = await (up.select(up.dayValues)..where((v) => v.symptomId.equals(3))).get();
+    expect({for (final r in rows) r.date: r.helped}, {'2026-09-04': true, '2026-09-05': false});
+    // Es gab schon ein Medikament: kein Ibuprofen dazu.
+    expect((await up.select(up.symptoms).get()).map((s) => s.name), isNot(contains('Ibuprofen')));
   });
 }

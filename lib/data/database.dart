@@ -37,6 +37,9 @@ class DayValues extends Table {
   IntColumn get symptomId => integer().references(Symptoms, #id)();
   IntColumn get value => integer()();
 
+  /// Nur bei Medikamenten: diese Einnahme hat geholfen.
+  BoolColumn get helped => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {date, symptomId};
 }
@@ -82,7 +85,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? driftDatabase(name: 'simplemigr'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -110,10 +113,37 @@ class AppDatabase extends _$AppDatabase {
             }
           }
           if (from < 4) await m.createTable(appTexts);
+          if (from < 5) {
+            await m.addColumn(dayValues, dayValues.helped);
+            await fillHelpedFromDayFlag();
+            final hasMed = await (select(symptoms)
+                  ..where((s) => s.grp.equalsValue(SymptomGroup.medication)))
+                .get();
+            if (hasMed.isEmpty) {
+              final maxOrder = symptoms.sortOrder.max();
+              final row = await (selectOnly(symptoms)..addColumns([maxOrder])).getSingle();
+              await into(symptoms).insert(SymptomsCompanion.insert(
+                name: 'Ibuprofen',
+                kind: SymptomKind.flag,
+                grp: SymptomGroup.medication,
+                sortOrder: (row.read(maxOrder) ?? -1) + 1,
+              ));
+            }
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
+      );
+
+  /// Früher gab es nur „Hat geholfen“ für den ganzen Tag: an solchen Tagen
+  /// gilt es für jedes genommene Medikament ([date] = nur dieser Tag).
+  Future<void> fillHelpedFromDayFlag({String? date}) => customStatement(
+        'UPDATE day_values SET helped = 1 '
+        'WHERE symptom_id IN (SELECT id FROM symptoms WHERE grp = ?) '
+        'AND date IN (SELECT v.date FROM day_values v JOIN symptoms s ON s.id = v.symptom_id '
+        'WHERE s.key = ?)${date == null ? '' : ' AND date = ?'}',
+        [SymptomGroup.medication.index, SymptomKey.medHelped, ?date],
       );
 
   Future<void> _seed() async {
@@ -135,6 +165,7 @@ class AppDatabase extends _$AppDatabase {
     await add('Übelkeit', SymptomKind.flag, g, SymptomKey.nausea);
     await add('Medikamente genommen', SymptomKind.flag, g, SymptomKey.medication);
     await add('Hat geholfen', SymptomKind.flag, g, SymptomKey.medHelped);
+    await add('Ibuprofen', SymptomKind.flag, SymptomGroup.medication);
     for (final n in ['Sicht', 'Sprache']) {
       await add(n, SymptomKind.flag, SymptomGroup.aura);
     }

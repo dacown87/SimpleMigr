@@ -5,11 +5,13 @@ import 'celebration.dart';
 import 'data/database.dart';
 import 'data/repository.dart';
 import 'data/transfer.dart';
+import 'period_reminder.dart';
 import 'reminder.dart';
 import 'ui/celebration_screen.dart';
 import 'ui/celebration_tile.dart';
 import 'ui/data_tiles.dart';
 import 'ui/export_tile.dart';
+import 'ui/period_reminder_tile.dart';
 import 'ui/reminder_tile.dart';
 import 'ui/report_tile.dart';
 import 'ui/version_tile.dart';
@@ -38,6 +40,7 @@ Future<void> main() async {
     }
   });
   final celebration = await LocalCelebration.create(reminder.plugin);
+  final periodReminder = await LocalPeriodReminder.create(reminder.plugin, repo);
   final weatherApi = OpenMeteoApi();
   final location = await LocationStore.load();
   final weatherSync = WeatherSync(repo: repo, api: weatherApi, location: location)..start();
@@ -50,6 +53,7 @@ Future<void> main() async {
     generalTiles: [
       ReminderTile(reminder: reminder),
       CelebrationTile(celebration: celebration, repo: repo),
+      PeriodReminderTile(reminder: periodReminder),
       WeatherPlaceTile(location: location, api: weatherApi),
       VersionTile(updater: updater),
     ],

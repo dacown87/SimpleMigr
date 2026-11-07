@@ -412,7 +412,8 @@ class _GridCell extends StatelessWidget {
       } else if (symptom.key == SymptomKey.migraine) {
         text = day.newAttack ? '/' : '';
       } else if (color == null) {
-        text = 'X';
+        // Medikamente: Anzahl, wenn mehr als eine Einnahme.
+        text = v > 1 ? '$v' : 'X';
       }
     }
     return Container(
@@ -447,7 +448,9 @@ class _CollapsedCell extends StatelessWidget {
   static String abbreviation(Symptom s, int value) {
     final name = s.name.trim();
     final short = name.length <= 4 ? name : name.substring(0, 3);
-    return s.kind == SymptomKind.scale0to3 ? '$short $value' : short;
+    return s.kind == SymptomKind.scale0to3 || value > 1
+        ? '$short $value'
+        : short;
   }
 
   @override

@@ -28,12 +28,13 @@ Beim Start prüft die App auf GitHub, ob es eine neuere Version gibt, und zeigt 
 - Monatsraster wie auf Papier: Hauptzeilen immer sichtbar, Symptome, Aura, Medikamente, Auslöser und Wetter aufklappbar; zugeklappt zeigen Kürzel, was an dem Tag gewählt ist
 - Schnelleintrag für heute, auch während einer Attacke in wenigen Taps
 - Schmerzen (0–3), Migräne, Periode, Übelkeit, Aura mit eigenen Aura-Symptomen
-- Medikamente genommen, mit eigenen Substanzen (z. B. Sumatriptan, Ibuprofen), danach „Hat geholfen“
+- Medikamente genommen, mit eigenen Substanzen (z. B. Sumatriptan, Ibuprofen), Anzahl pro Tag mit − / +, danach „Hat geholfen“
 - „Neue Attacke“ (`/`) markiert, dass an dem Tag eine Attacke endet und eine neue beginnt
 - Auslöser aus einer erweiterbaren Liste plus freie Notiz
 - Wetter wird mitgespeichert; der Ort lässt sich per Name oder Postleitzahl suchen (Standard Deutschland)
 - Tägliche Erinnerung
 - Monatsfeier: am Monatsende eine Benachrichtigung, die dich für den geschafften Monat feiert
+- Periodenerinnerung: 3 Tage vor der erwarteten Periode, berechnet aus der zuletzt eingetragenen Periode und der eingestellten Zykluslänge
 - „Meine Migräne“: die eigene Migräne in einzelnen Punkten beschreiben (hinzufügen, bearbeiten, verschieben, wischen zum Löschen); steht im PDF auf der ersten Seite
 - PDF-Export im Look der Papiertabelle
 - Zusammenfassung für den Arzt (eine Seite A4): Verlauf je Monat, Attacken, Aura- und Begleitsymptome nach Gruppen, Zyklusbezug, Medikamente, datenbasierte Fragen. Rechnet lokal, ohne KI

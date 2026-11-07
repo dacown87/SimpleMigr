@@ -73,7 +73,7 @@ pw.Widget _monthPage(MonthData m) {
     if (s.kind == SymptomKind.scale0to3) return '$v';
     if (s.key == SymptomKey.migraine) return d.newAttack ? '/' : '';
     if (s.key == SymptomKey.period) return '';
-    return 'X';
+    return v > 1 ? '$v' : 'X';
   }
 
   PdfColor? fill(Symptom s, DayData d) {

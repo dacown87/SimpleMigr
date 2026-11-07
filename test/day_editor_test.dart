@@ -115,12 +115,12 @@ void main() {
   dbWidgetTest('Periode ist ein Schalter; Übelkeit liegt im Block „Symptome“', (tester, env) async {
     await tester.pumpWidget(app(env));
     await settle(tester);
-    expect(find.widgetWithText(SwitchListTile, 'Periode'), findsOneWidget);
+    expect(find.byKey(const ValueKey('switch-Periode')), findsOneWidget);
     expect(find.widgetWithText(SwitchListTile, 'Übelkeit'), findsNothing);
     expect(find.text('Mehr'), findsNothing);
     expect(find.text('Übelkeit'), findsNothing); // Block zu, solange der Schalter aus ist
 
-    await tester.tap(find.widgetWithText(SwitchListTile, 'Periode'));
+    await tester.tap(find.byKey(const ValueKey('switch-Periode')));
     await settle(tester);
     final period = (await tester.runAsync(() => env.idOf(SymptomKey.period)))!;
     expect((await tester.runAsync(() => env.repo.getDay(today)))!.value(period), 1);
@@ -168,6 +168,13 @@ void main() {
     await tester.tap(sw);
     await settle(tester);
     await tester.pumpAndSettle();
+    // Je Medikament: „Hat geholfen“ erst nach einer Einnahme.
+    expect(find.text('Hat geholfen'), findsNothing);
+    final ibu = (await tester.runAsync(() async =>
+        (await env.db.select(env.db.symptoms).get()).firstWhere((s) => s.name == 'Ibuprofen').id))!;
+    await tester.ensureVisible(find.byKey(ValueKey('med-plus-$ibu')));
+    await tester.tap(find.byKey(ValueKey('med-plus-$ibu')));
+    await settle(tester);
     expect(find.text('Hat geholfen'), findsOneWidget);
     await tester.tap(find.text('Hat geholfen'));
     await settle(tester);
@@ -177,6 +184,14 @@ void main() {
     var d = (await tester.runAsync(() => env.repo.getDay(today)))!;
     expect(d.value(ids[SymptomKey.medication]!), 1);
     expect(d.value(ids[SymptomKey.medHelped]!), 1);
+    expect(d.helped, {ibu});
+    // Haken wieder weg: auch der Tageswert geht aus.
+    await tester.tap(find.text('Hat geholfen'));
+    await settle(tester);
+    d = (await tester.runAsync(() => env.repo.getDay(today)))!;
+    expect(d.value(ids[SymptomKey.medHelped]!), 0);
+    await tester.tap(find.text('Hat geholfen'));
+    await settle(tester);
     await tester.tap(sw);
     await settle(tester);
     d = (await tester.runAsync(() => env.repo.getDay(today)))!;
@@ -222,12 +237,20 @@ void main() {
     await tester.pumpWidget(app(env));
     await settle(tester);
     double y(Finder f) => tester.getTopLeft(f).dy;
-    final period = y(find.widgetWithText(SwitchListTile, 'Periode'));
+    final period = y(find.byKey(const ValueKey('switch-Periode')));
     final symptome = y(find.text('Symptome'));
     final aura = y(find.text('Aura'));
     final triggers = y(find.text('Auslöser'));
     expect(symptome, greaterThan(period));
     expect(aura, greaterThan(symptome));
     expect(triggers, greaterThan(aura));
+  });
+
+  dbWidgetTest('Schalter stehen bündig untereinander', (tester, env) async {
+    await tester.pumpWidget(app(env));
+    await settle(tester);
+    double x(String k) => tester.getCenter(find.byKey(ValueKey('switch-$k'))).dx;
+    expect(x('Periode'), x('Symptome'));
+    expect(x('Medikamente'), x('Symptome'));
   });
 }

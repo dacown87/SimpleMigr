@@ -30,6 +30,9 @@ class ImportDay {
   /// Index in [ImportData.symptoms] -> Wert. Fehlende Symptome der Datei zählen als 0.
   final values = <int, int>{};
 
+  /// Indizes der Medikamente, die geholfen haben (nur aus Sicherungen).
+  final helped = <int>{};
+
   /// `null` = unverändert lassen.
   bool? newAttack;
   String? note;
@@ -117,7 +120,13 @@ class DataTransfer {
           },
       ],
       'values': [
-        for (final v in values) {'date': v.date, 'symptom': v.symptomId, 'value': v.value},
+        for (final v in values)
+          {
+            'date': v.date,
+            'symptom': v.symptomId,
+            'value': v.value,
+            if (v.helped) 'helped': true,
+          },
       ],
       'days': [
         for (final m in metas) {'date': m.date, 'newAttack': m.newAttack, 'note': m.note},
@@ -161,7 +170,7 @@ class DataTransfer {
   };
 
   static String _cell(Symptom s, int v) =>
-      v == 0 ? '' : (s.kind == SymptomKind.scale0to3 ? '$v' : 'X');
+      v == 0 ? '' : (s.kind == SymptomKind.scale0to3 || v > 1 ? '$v' : 'X');
 
   static String _quote(String f) =>
       RegExp(r'[;"\r\n]').hasMatch(f) ? '"${f.replaceAll('"', '""')}"' : f;
@@ -206,7 +215,9 @@ class DataTransfer {
     for (final v in (j['values'] as List).cast<Map<String, dynamic>>()) {
       final i = indexById[v['symptom'] as int];
       if (i == null) continue;
-      (days[v['date'] as String] ??= ImportDay()).values[i] = v['value'] as int;
+      final d = days[v['date'] as String] ??= ImportDay();
+      d.values[i] = v['value'] as int;
+      if (v['helped'] == true) d.helped.add(i);
     }
     for (final m in (j['days'] as List? ?? const []).cast<Map<String, dynamic>>()) {
       final d = days[m['date'] as String] ??= ImportDay();
@@ -312,7 +323,11 @@ class DataTransfer {
       final day = days[toKey(date)] = ImportDay();
       String at(int c) => c < r.length ? r[c].trim() : '';
       for (final MapEntry(key: c, value: i) in symptomCol.entries) {
-        day.values[i] = _parseValue(at(c), symptoms[i].kind);
+        day.values[i] = _parseValue(
+          at(c),
+          symptoms[i].kind,
+          count: symptoms[i].grp == SymptomGroup.medication,
+        );
       }
       if (noteCol != null && at(noteCol).isNotEmpty) day.note = at(noteCol);
       if (newAttackCol != null || migraineCol != null) {
@@ -351,14 +366,15 @@ class DataTransfer {
 
   static const _falsy = {'', '0', '-', 'nein', 'n', 'no', 'false', 'falsch'};
 
-  static int _parseValue(String raw, SymptomKind kind) {
+  static int _parseValue(String raw, SymptomKind kind, {bool count = false}) {
     final v = raw.trim().toLowerCase();
     if (_falsy.contains(v)) return 0;
     if (kind == SymptomKind.scale0to3) {
       final n = int.tryParse(v) ?? double.tryParse(v.replaceAll(',', '.'))?.round();
       return (n ?? 1).clamp(0, 3);
     }
-    return 1;
+    // Bei Medikamenten sind Zahlen die Anzahl der Einnahmen.
+    return count ? (int.tryParse(v) ?? 1).clamp(1, 99) : 1;
   }
 
   /// Ordnet die Symptome der Datei lokalen Symptomen zu: Systemschlüssel, dann
@@ -414,10 +430,17 @@ class DataTransfer {
             await db
                 .into(db.dayValues)
                 .insertOnConflictUpdate(
-                  DayValuesCompanion.insert(date: date, symptomId: ids[i], value: v),
+                  DayValuesCompanion.insert(
+                    date: date,
+                    symptomId: ids[i],
+                    value: v,
+                    helped: Value(day.helped.contains(i)),
+                  ),
                 );
           }
         }
+        // Ältere Sicherungen und Tabellen kennen nur „Hat geholfen“ für den Tag.
+        if (day.helped.isEmpty) await db.fillHelpedFromDayFlag(date: date);
         final old = await (db.select(
           db.dayMeta,
         )..where((m) => m.date.equals(date))).getSingleOrNull();

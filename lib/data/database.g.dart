@@ -485,8 +485,21 @@ class $DayValuesTable extends DayValues
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _helpedMeta = const VerificationMeta('helped');
   @override
-  List<GeneratedColumn> get $columns => [date, symptomId, value];
+  late final GeneratedColumn<bool> helped = GeneratedColumn<bool>(
+    'helped',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("helped" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [date, symptomId, value, helped];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -523,6 +536,12 @@ class $DayValuesTable extends DayValues
     } else if (isInserting) {
       context.missing(_valueMeta);
     }
+    if (data.containsKey('helped')) {
+      context.handle(
+        _helpedMeta,
+        helped.isAcceptableOrUnknown(data['helped']!, _helpedMeta),
+      );
+    }
     return context;
   }
 
@@ -544,6 +563,10 @@ class $DayValuesTable extends DayValues
         DriftSqlType.int,
         data['${effectivePrefix}value'],
       )!,
+      helped: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}helped'],
+      )!,
     );
   }
 
@@ -557,10 +580,14 @@ class DayValue extends DataClass implements Insertable<DayValue> {
   final String date;
   final int symptomId;
   final int value;
+
+  /// Nur bei Medikamenten: diese Einnahme hat geholfen.
+  final bool helped;
   const DayValue({
     required this.date,
     required this.symptomId,
     required this.value,
+    required this.helped,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -568,6 +595,7 @@ class DayValue extends DataClass implements Insertable<DayValue> {
     map['date'] = Variable<String>(date);
     map['symptom_id'] = Variable<int>(symptomId);
     map['value'] = Variable<int>(value);
+    map['helped'] = Variable<bool>(helped);
     return map;
   }
 
@@ -576,6 +604,7 @@ class DayValue extends DataClass implements Insertable<DayValue> {
       date: Value(date),
       symptomId: Value(symptomId),
       value: Value(value),
+      helped: Value(helped),
     );
   }
 
@@ -588,6 +617,7 @@ class DayValue extends DataClass implements Insertable<DayValue> {
       date: serializer.fromJson<String>(json['date']),
       symptomId: serializer.fromJson<int>(json['symptomId']),
       value: serializer.fromJson<int>(json['value']),
+      helped: serializer.fromJson<bool>(json['helped']),
     );
   }
   @override
@@ -597,19 +627,23 @@ class DayValue extends DataClass implements Insertable<DayValue> {
       'date': serializer.toJson<String>(date),
       'symptomId': serializer.toJson<int>(symptomId),
       'value': serializer.toJson<int>(value),
+      'helped': serializer.toJson<bool>(helped),
     };
   }
 
-  DayValue copyWith({String? date, int? symptomId, int? value}) => DayValue(
-    date: date ?? this.date,
-    symptomId: symptomId ?? this.symptomId,
-    value: value ?? this.value,
-  );
+  DayValue copyWith({String? date, int? symptomId, int? value, bool? helped}) =>
+      DayValue(
+        date: date ?? this.date,
+        symptomId: symptomId ?? this.symptomId,
+        value: value ?? this.value,
+        helped: helped ?? this.helped,
+      );
   DayValue copyWithCompanion(DayValuesCompanion data) {
     return DayValue(
       date: data.date.present ? data.date.value : this.date,
       symptomId: data.symptomId.present ? data.symptomId.value : this.symptomId,
       value: data.value.present ? data.value.value : this.value,
+      helped: data.helped.present ? data.helped.value : this.helped,
     );
   }
 
@@ -618,37 +652,42 @@ class DayValue extends DataClass implements Insertable<DayValue> {
     return (StringBuffer('DayValue(')
           ..write('date: $date, ')
           ..write('symptomId: $symptomId, ')
-          ..write('value: $value')
+          ..write('value: $value, ')
+          ..write('helped: $helped')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(date, symptomId, value);
+  int get hashCode => Object.hash(date, symptomId, value, helped);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is DayValue &&
           other.date == this.date &&
           other.symptomId == this.symptomId &&
-          other.value == this.value);
+          other.value == this.value &&
+          other.helped == this.helped);
 }
 
 class DayValuesCompanion extends UpdateCompanion<DayValue> {
   final Value<String> date;
   final Value<int> symptomId;
   final Value<int> value;
+  final Value<bool> helped;
   final Value<int> rowid;
   const DayValuesCompanion({
     this.date = const Value.absent(),
     this.symptomId = const Value.absent(),
     this.value = const Value.absent(),
+    this.helped = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DayValuesCompanion.insert({
     required String date,
     required int symptomId,
     required int value,
+    this.helped = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : date = Value(date),
        symptomId = Value(symptomId),
@@ -657,12 +696,14 @@ class DayValuesCompanion extends UpdateCompanion<DayValue> {
     Expression<String>? date,
     Expression<int>? symptomId,
     Expression<int>? value,
+    Expression<bool>? helped,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (date != null) 'date': date,
       if (symptomId != null) 'symptom_id': symptomId,
       if (value != null) 'value': value,
+      if (helped != null) 'helped': helped,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -671,12 +712,14 @@ class DayValuesCompanion extends UpdateCompanion<DayValue> {
     Value<String>? date,
     Value<int>? symptomId,
     Value<int>? value,
+    Value<bool>? helped,
     Value<int>? rowid,
   }) {
     return DayValuesCompanion(
       date: date ?? this.date,
       symptomId: symptomId ?? this.symptomId,
       value: value ?? this.value,
+      helped: helped ?? this.helped,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -693,6 +736,9 @@ class DayValuesCompanion extends UpdateCompanion<DayValue> {
     if (value.present) {
       map['value'] = Variable<int>(value.value);
     }
+    if (helped.present) {
+      map['helped'] = Variable<bool>(helped.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -705,6 +751,7 @@ class DayValuesCompanion extends UpdateCompanion<DayValue> {
           ..write('date: $date, ')
           ..write('symptomId: $symptomId, ')
           ..write('value: $value, ')
+          ..write('helped: $helped, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2127,12 +2174,14 @@ typedef $$DayValuesTableCreateCompanionBuilder = DayValuesCompanion Function({
   required String date,
   required int symptomId,
   required int value,
+  Value<bool> helped,
   Value<int> rowid,
 });
 typedef $$DayValuesTableUpdateCompanionBuilder = DayValuesCompanion Function({
   Value<String> date,
   Value<int> symptomId,
   Value<int> value,
+  Value<bool> helped,
   Value<int> rowid,
 });
 
@@ -2174,6 +2223,11 @@ class $$DayValuesTableFilterComposer
 
   ColumnFilters<int> get value => $composableBuilder(
     column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get helped => $composableBuilder(
+    column: $table.helped,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2220,6 +2274,11 @@ class $$DayValuesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get helped => $composableBuilder(
+    column: $table.helped,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SymptomsTableOrderingComposer get symptomId {
     final $$SymptomsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2258,6 +2317,9 @@ class $$DayValuesTableAnnotationComposer
 
   GeneratedColumn<int> get value =>
       $composableBuilder(column: $table.value, builder: (column) => column);
+
+  GeneratedColumn<bool> get helped =>
+      $composableBuilder(column: $table.helped, builder: (column) => column);
 
   $$SymptomsTableAnnotationComposer get symptomId {
     final $$SymptomsTableAnnotationComposer composer = $composerBuilder(
@@ -2314,11 +2376,13 @@ class $$DayValuesTableTableManager
                 Value<String> date = const Value.absent(),
                 Value<int> symptomId = const Value.absent(),
                 Value<int> value = const Value.absent(),
+                Value<bool> helped = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DayValuesCompanion(
                 date: date,
                 symptomId: symptomId,
                 value: value,
+                helped: helped,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2326,11 +2390,13 @@ class $$DayValuesTableTableManager
                 required String date,
                 required int symptomId,
                 required int value,
+                Value<bool> helped = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DayValuesCompanion.insert(
                 date: date,
                 symptomId: symptomId,
                 value: value,
+                helped: helped,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
