@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../data/database.dart';
 import '../data/repository.dart';
+import 'customize_tab.dart';
+import 'palette.dart';
 import 'theme.dart';
 import 'util.dart';
 
@@ -11,6 +13,7 @@ class SettingsScreen extends StatelessWidget {
     required this.repo,
     this.generalTiles = const [],
     this.dataTiles = const [],
+    this.palette,
   });
 
   final Repository repo;
@@ -21,6 +24,9 @@ class SettingsScreen extends StatelessWidget {
   /// Tab „Daten“ (PDF-Export, Sicherung, Import).
   final List<Widget> dataTiles;
 
+  /// Farbwahl im Tab „Anpassen“.
+  final PaletteController? palette;
+
   @override
   Widget build(BuildContext context) {
     const tabs = TabBar(
@@ -28,10 +34,11 @@ class SettingsScreen extends StatelessWidget {
         Tab(text: 'Einträge'),
         Tab(text: 'Allgemein'),
         Tab(text: 'Daten'),
+        Tab(text: 'Anpassen'),
       ],
     );
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Einstellungen'),
@@ -47,6 +54,7 @@ class SettingsScreen extends StatelessWidget {
             _entries(context),
             ListView(children: generalTiles),
             ListView(children: dataTiles),
+            CustomizeTab(controller: palette ?? PaletteController()),
           ],
         ),
       ),

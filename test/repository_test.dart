@@ -124,6 +124,14 @@ void main() {
     expect((await first.timeout(const Duration(seconds: 2))).value(pain), 2);
   });
 
+  test('Zwei getrennte Attacken 1.–3. und 6.–8. → 2', () async {
+    for (final d in [1, 2, 3, 6, 7, 8]) {
+      await repo.setValue(DateTime(2026, 9, d), migraine, 1);
+    }
+    final sep = await repo.getMonth(2026, 9);
+    expect((sep.migraineDays, sep.attacks), (6, 2));
+  });
+
   test('Monatssummen über Monatsgrenze', () async {
     for (final d in [DateTime(2026, 8, 30), DateTime(2026, 8, 31), DateTime(2026, 9, 1)]) {
       await repo.setValue(d, migraine, 1);

@@ -110,12 +110,12 @@ class _CelebrationScreenState extends State<CelebrationScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [AppColors.sunny, AppColors.background, AppColors.accent],
-            stops: [0, 0.55, 1],
+            stops: const [0, 0.55, 1],
           ),
         ),
         child: Stack(
@@ -320,7 +320,7 @@ class _Confetti {
   final double x, offset, speed, size, spin, sway;
   final Color color;
 
-  static const _colors = [
+  static final _colors = [
     AppColors.sunny,
     AppColors.gold,
     AppColors.accent,

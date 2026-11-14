@@ -119,7 +119,7 @@ class _PointList extends StatelessWidget {
               ),
               onDismissed: (_) => _remove(context, i),
               child: ListTile(
-                leading: const Icon(Icons.circle, size: 10, color: AppColors.accent),
+                leading: Icon(Icons.circle, size: 10, color: AppColors.accent),
                 minLeadingWidth: 12,
                 title: Text(points[i], style: const TextStyle(fontSize: 18)),
                 onTap: () => _edit(context, i),
@@ -209,7 +209,7 @@ class _NewPointFieldState extends State<_NewPointField> {
               key: const ValueKey('add-point'),
               tooltip: 'Punkt hinzufügen',
               iconSize: 32,
-              icon: const Icon(Icons.add_circle, color: AppColors.accent),
+              icon: Icon(Icons.add_circle, color: AppColors.accent),
               onPressed: _add,
             ),
           ],

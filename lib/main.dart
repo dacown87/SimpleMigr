@@ -11,6 +11,7 @@ import 'ui/celebration_screen.dart';
 import 'ui/celebration_tile.dart';
 import 'ui/data_tiles.dart';
 import 'ui/export_tile.dart';
+import 'ui/palette.dart';
 import 'ui/period_reminder_tile.dart';
 import 'ui/reminder_tile.dart';
 import 'ui/report_tile.dart';
@@ -45,8 +46,10 @@ Future<void> main() async {
   final location = await LocationStore.load();
   final weatherSync = WeatherSync(repo: repo, api: weatherApi, location: location)..start();
   final updater = GithubUpdater();
+  final palette = await PaletteController.load();
   runApp(SimpleMigrApp(
     repo: repo,
+    palette: palette,
     navigatorKey: navKey,
     shellKey: shellKey,
     updater: updater,

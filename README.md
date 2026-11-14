@@ -39,7 +39,7 @@ Beim Start prüft die App auf GitHub, ob es eine neuere Version gibt, und zeigt 
 - PDF-Export im Look der Papiertabelle
 - Zusammenfassung für den Arzt (eine Seite A4): Verlauf je Monat, Attacken, Aura- und Begleitsymptome nach Gruppen, Zyklusbezug, Medikamente, datenbasierte Fragen. Rechnet lokal, ohne KI
 - Sicherung (JSON, alles inklusive Wetter) und Tabelle (CSV) speichern; beides lässt sich wieder importieren, auch eigene Tabellen aus Excel/LibreOffice. Für importierte Migränetage wird das Wetter nachgeladen
-- Einstellungen in Tabs: Einträge, Allgemein, Daten. Alle Symptome, Auslöser und Medikamente sind dort anpassbar
+- Einstellungen in Tabs: Einträge, Allgemein, Daten, Anpassen. Alle Symptome, Auslöser und Medikamente sind dort anpassbar, ebenso die Grundfarben der App
 
 Alle Daten bleiben lokal auf dem Gerät, es gibt kein Konto. Das Internet wird nur für den Wetterabruf genutzt.
 
