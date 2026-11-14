@@ -5,6 +5,7 @@ import 'data/repository.dart';
 import 'update/updater.dart';
 import 'ui/description_screen.dart';
 import 'ui/month_screen.dart';
+import 'ui/palette.dart';
 import 'ui/settings_screen.dart';
 import 'ui/theme.dart';
 import 'ui/today_screen.dart';
@@ -20,9 +21,11 @@ class SimpleMigrApp extends StatelessWidget {
     this.navigatorKey,
     this.shellKey,
     this.updater,
+    this.palette,
   });
 
   final Repository repo;
+  final PaletteController? palette;
   final List<Widget> generalTiles;
   final List<Widget> dataTiles;
   final DateTime Function() clock;
@@ -34,6 +37,14 @@ class SimpleMigrApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = this.palette ?? PaletteController();
+    return ListenableBuilder(
+      listenable: palette,
+      builder: (context, _) => _app(palette),
+    );
+  }
+
+  Widget _app(PaletteController palette) {
     return MaterialApp(
       title: 'SimpleMigr',
       debugShowCheckedModeBanner: false,
@@ -49,7 +60,9 @@ class SimpleMigrApp extends StatelessWidget {
         dataTiles: dataTiles,
         clock: clock,
         updater: updater,
+        palette: palette,
       ),
+      builder: (context, child) => _Repaint(palette, child!),
     );
   }
 }
@@ -62,9 +75,11 @@ class HomeShell extends StatefulWidget {
     required this.dataTiles,
     required this.clock,
     this.updater,
+    this.palette,
   });
 
   final Repository repo;
+  final PaletteController? palette;
   final List<Widget> generalTiles;
   final List<Widget> dataTiles;
   final DateTime Function() clock;
@@ -122,6 +137,7 @@ class HomeShellState extends State<HomeShell> {
             repo: widget.repo,
             generalTiles: widget.generalTiles,
             dataTiles: widget.dataTiles,
+            palette: widget.palette,
           ),
         ],
       ),
@@ -139,4 +155,45 @@ class HomeShellState extends State<HomeShell> {
       ),
     );
   }
+}
+
+/// Farben stecken in statischen [AppColors]; nach einer Änderung müssen auch
+/// `const`-Teilbäume neu aufgebaut werden.
+class _Repaint extends StatefulWidget {
+  const _Repaint(this.palette, this.child);
+
+  final PaletteController palette;
+  final Widget child;
+
+  @override
+  State<_Repaint> createState() => _RepaintState();
+}
+
+class _RepaintState extends State<_Repaint> {
+  @override
+  void initState() {
+    super.initState();
+    widget.palette.addListener(_rebuildAll);
+  }
+
+  @override
+  void dispose() {
+    widget.palette.removeListener(_rebuildAll);
+    super.dispose();
+  }
+
+  void _rebuildAll() {
+    void visit(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) (context as Element).visitChildren(visit);
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
